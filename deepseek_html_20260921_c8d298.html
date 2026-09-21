@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CinéIA — Scénario, Style, Validation, Film</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+        --bg: #0a0a0a; --panel: #151515; --panel-2: #1a1a1a; --border: #2a2a2a;
+        --accent: #c4b5fd; --accent-dark: #a78bfa; --text: #e0e0e0; --text-dim: #888;
+        --success: #4ade80; --error: #f87171; --warn: #facc15;
+    }
+    body { font-family: system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+        background: var(--bg); color: var(--text); min-height: 100vh; display: flex;
+        flex-direction: column; align-items: center; padding: 2rem 1rem; }
+    .container { max-width: 1200px; width: 100%; }
+    header { text-align: center; margin-bottom: 2rem; }
+    h1 { font-size: 2rem; font-weight: 300; letter-spacing: 0.05em; color: #f0f0f0; }
+    .subtitle { color: var(--text-dim); font-size: 0.9rem; font-style: italic; margin-top: 0.3rem; }
+
+    .settings-toggle { background: transparent; border: 1px solid var(--border);
+        color: var(--text-dim); padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.8rem;
+        cursor: pointer; margin-bottom: 1rem; }
+    .settings-toggle:hover { border-color: var(--accent-dark); color: var(--accent); }
+    .settings-panel { background: var(--panel); border: 1px solid var(--border);
+        border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem; display: none; }
+    .settings-panel.visible { display: block; }
+    .settings-row { display: flex; gap: 0.75rem; align-items: end; }
+    .settings-hint { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.5rem; }
+
+    .form-panel { background: var(--panel); border: 1px solid var(--border);
+        border-radius: 16px; padding: 2rem; margin-bottom: 2rem; }
+    .form-row { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .form-row > * { flex: 1; min-width: 180px; }
+    label { display: block; font-size: 0.8rem; color: var(--text-dim); margin-bottom: 0.4rem;
+        text-transform: uppercase; letter-spacing: 0.08em; }
+    textarea, select, input[type="number"], input[type="password"], input[type="text"] {
+        width: 100%; padding: 0.85rem 1rem; border-radius: 10px; border: 1px solid var(--border);
+        background: #0f0f0f; color: var(--text); font-family: inherit; font-size: 0.95rem;
+        transition: border-color 0.2s; }
+    textarea { height: 100px; resize: vertical; min-height: 60px; }
+    textarea:focus, select:focus, input:focus { outline: none; border-color: var(--accent-dark); }
+    select option { background: #1a1a1a; color: var(--text); }
+    .slider-row { display: flex; align-items: center; gap: 1rem; }
+    .slider-row input[type="range"] { flex: 1; accent-color: var(--accent-dark); }
+    .slider-value { font-size: 1.1rem; font-weight: 600; color: var(--accent); min-width: 3ch;
+        text-align: right; font-variant-numeric: tabular-nums; }
+
+    .btn { padding: 1rem 2rem; background: var(--accent-dark); color: #0a0a0a; border: none;
+        border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer;
+        transition: background 0.2s, transform 0.1s; width: 100%; }
+    .btn:hover:not(:disabled) { background: var(--accent); }
+    .btn:active:not(:disabled) { transform: scale(0.98); }
+    .btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+    .btn-secondary { background: #2a2a2a; color: var(--text); }
+    .btn-secondary:hover:not(:disabled) { background: #3a3a3a; }
+    .btn-small { padding: 0.6rem 1.2rem; font-size: 0.85rem; }
+
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+        padding: 1.5rem; margin-bottom: 1.5rem; display: none; }
+    .panel.visible { display: block; }
+    .panel-title { font-size: 0.8rem; color: var(--accent-dark); text-transform: uppercase;
+        letter-spacing: 0.1em; margin-bottom: 1rem; font-weight: 600; }
+
+    .status-line { font-size: 0.9rem; color: var(--accent-dark); margin-bottom: 1rem;
+        display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+    .status-line .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-dark);
+        animation: pulse 1.5s infinite; flex-shrink: 0; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+    .cooldown-badge { background: #3a2a15; color: var(--warn); padding: 0.2rem 0.6rem;
+        border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+
+    .bible-title { font-size: 1.6rem; font-weight: 300; color: #f0f0f0; margin-bottom: 0.3rem;
+        font-style: italic; }
+    .bible-logline { color: var(--text-dim); font-size: 0.9rem; margin-bottom: 1.2rem; }
+    .bible-section { margin-bottom: 1rem; }
+    .bible-section-title { font-size: 0.75rem; color: var(--accent); text-transform: uppercase;
+        letter-spacing: 0.1em; margin-bottom: 0.4rem; font-weight: 600; }
+    .character-card { background: var(--panel-2); border: 1px solid var(--border);
+        border-radius: 10px; padding: 0.8rem; margin-bottom: 0.5rem; }
+    .character-name { font-weight: 600; color: var(--accent); font-size: 0.9rem; }
+    .character-role { font-size: 0.75rem; color: var(--text-dim); font-style: italic;
+        margin-bottom: 0.3rem; }
+    .character-appearance { font-size: 0.8rem; color: var(--text); line-height: 1.4; }
+    .bible-text { font-size: 0.85rem; color: var(--text); line-height: 1.5; }
+
+    .scene-item { background: var(--panel-2); border: 1px solid var(--border);
+        border-left: 3px solid var(--accent-dark); border-radius: 10px; padding: 0.9rem;
+        margin-bottom: 0.6rem; }
+    .scene-header { display: flex; justify-content: space-between; align-items: baseline;
+        margin-bottom: 0.3rem; }
+    .scene-number { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase;
+        letter-spacing: 0.1em; }
+    .scene-act { font-size: 0.65rem; color: var(--accent); background: #2a2035;
+        padding: 0.15rem 0.5rem; border-radius: 4px; }
+    .scene-title { font-size: 0.95rem; color: #f0f0f0; font-weight: 500; margin-bottom: 0.4rem; }
+    .scene-beat { font-size: 0.82rem; color: var(--text); line-height: 1.4; margin-bottom: 0.5rem; }
+    .scene-dialogue { font-size: 0.85rem; color: var(--accent); font-style: italic;
+        padding-left: 0.8rem; border-left: 2px solid var(--accent-dark); margin-bottom: 0.4rem;
+        line-height: 1.4; }
+    .scene-meta { font-size: 0.7rem; color: var(--text-dim); display: flex; gap: 0.8rem;
+        flex-wrap: wrap; }
+    .scene-prompt { font-size: 0.7rem; color: #555; font-family: monospace;
+        margin-top: 0.4rem; padding: 0.5rem; background: #0f0f0f; border-radius: 6px;
+        line-height: 1.3; max-height: 100px; overflow-y: auto; }
+
+    .clips-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 0.75rem; }
+    .clip-card { background: #1a1a1a; border: 1px solid var(--border); border-radius: 12px;
+        padding: 1rem; text-align: center; transition: border-color 0.3s, opacity 0.3s; }
+    .clip-card.pending { opacity: 0.45; }
+    .clip-card.processing { border-color: var(--accent-dark); }
+    .clip-card.done { border-color: var(--success); }
+    .clip-card.failed { border-color: var(--error); }
+    .clip-number { font-size: 0.7rem; color: #666; text-transform: uppercase;
+        letter-spacing: 0.1em; }
+    .clip-title { font-size: 0.75rem; color: #ccc; margin-bottom: 0.4rem; min-height: 2em;
+        line-height: 1.2; }
+    .clip-icon { font-size: 1.4rem; margin-bottom: 0.3rem; }
+    .clip-timer { font-size: 1.1rem; font-weight: 600; color: var(--text);
+        font-variant-numeric: tabular-nums; }
+    .clip-status-text { font-size: 0.68rem; color: var(--text-dim); margin-top: 0.2rem; }
+    .clip-card.done .clip-timer { color: var(--success); }
+    .clip-card.failed .clip-timer { color: var(--error); }
+
+    .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 1rem; margin-top: 1rem; }
+    .video-item { background: var(--panel-2); border-radius: 12px; overflow: hidden;
+        border: 1px solid var(--border); animation: fadeIn 0.6s ease-in; }
+    @keyframes fadeIn { from{opacity:0; transform:translateY(10px);}
+        to{opacity:1; transform:translateY(0);} }
+    .video-item video { width: 100%; display: block; aspect-ratio: 9/16; object-fit: cover;
+        background: #000; }
+    .video-caption { padding: 0.7rem 0.8rem; background: var(--panel); }
+    .video-caption-title { font-size: 0.8rem; color: var(--accent); font-weight: 600;
+        margin-bottom: 0.3rem; }
+    .video-caption-dialogue { font-size: 0.78rem; color: #ddd; font-style: italic;
+        padding-left: 0.6rem; border-left: 2px solid var(--accent-dark); line-height: 1.4; }
+
+    /* Styles pour les 4 propositions */
+    .proposals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 1rem; margin-top: 1rem; }
+    .proposal-card { background: var(--panel-2); border: 2px solid var(--border);
+        border-radius: 12px; overflow: hidden; cursor: pointer; transition: border-color 0.2s, transform 0.1s; }
+    .proposal-card:hover { border-color: var(--accent-dark); transform: scale(1.02); }
+    .proposal-card.selected { border-color: var(--success); box-shadow: 0 0 12px rgba(74, 222, 128, 0.4); }
+    .proposal-card video { width: 100%; display: block; aspect-ratio: 9/16; object-fit: cover; background: #000; }
+    .proposal-label { padding: 0.6rem; text-align: center; background: var(--panel); }
+    .proposal-label .director-name { font-size: 0.85rem; color: var(--accent); font-weight: 600; }
+    .proposal-label .proposal-status { font-size: 0.7rem; color: var(--text-dim); margin-top: 0.2rem; }
+
+    .log-box { margin-top: 1rem; padding: 0.75rem; background: #0f0f0f; border-radius: 10px;
+        border: 1px solid #222; font-family: ui-monospace, monospace; font-size: 0.7rem;
+        color: #666; max-height: 220px; overflow-y: auto; display: none; }
+    .log-box.visible { display: block; }
+    .log-box div { padding: 1px 0; }
+    .log-box .hl { color: var(--accent); }
+    .log-box .ok { color: var(--success); }
+    .log-box .err { color: var(--error); }
+    .log-box .warn { color: var(--warn); }
+
+    .error-box { background: #2a1515; border: 1px solid var(--error); border-radius: 10px;
+        padding: 1rem; color: var(--error); font-size: 0.85rem; margin-top: 1rem; display: none; }
+    .error-box.visible { display: block; }
+
+    .history-section { margin-top: 3rem; border-top: 1px solid var(--border); padding-top: 2rem; }
+    .history-title { font-size: 1.1rem; font-weight: 300; color: var(--accent-dark);
+        margin-bottom: 1rem; }
+    .history-empty { color: var(--text-dim); font-size: 0.85rem; font-style: italic; }
+    .history-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 0.75rem; margin-top: 1rem; }
+    .history-item { background: var(--panel); border: 1px solid var(--border);
+        border-radius: 10px; overflow: hidden; }
+    .history-item video { width: 100%; display: block; aspect-ratio: 9/16; object-fit: cover; }
+    .history-meta { padding: 0.5rem; font-size: 0.7rem; color: var(--text-dim); line-height: 1.4; }
+    .history-meta .style { color: var(--accent); font-weight: 600; }
+
+    .upload-area { background: var(--panel); border: 2px dashed var(--border);
+        border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; text-align: center;
+        cursor: pointer; transition: border-color 0.2s; }
+    .upload-area:hover, .upload-area.dragover { border-color: var(--accent-dark); }
+    .upload-area input[type="file"] { display: none; }
+    .upload-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+    .upload-text { font-size: 0.9rem; color: var(--text); margin-bottom: 0.3rem; }
+    .upload-hint { font-size: 0.7rem; color: var(--text-dim); }
+    .preview-thumb { max-width: 100%; max-height: 150px; border-radius: 8px; margin-top: 0.6rem; display: none; }
+    .preview-thumb.visible { display: block; margin: 0.6rem auto 0; }
+
+    .phase-indicator { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; justify-content: center; }
+    .phase-dot { width: 12px; height: 12px; border-radius: 50%; background: #333; transition: background 0.3s; }
+    .phase-dot.active { background: var(--accent-dark); }
+    .phase-dot.done { background: var(--success); }
+</style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>CinéIA</h1>
+        <p class="subtitle">Scénario → Style → Validation → Film</p>
+    </header>
+
+    <button class="settings-toggle" onclick="document.getElementById('settings-panel').classList.toggle('visible')">
+        ⚙️ Paramètres API
+    </button>
+    <div id="settings-panel" class="settings-panel">
+        <div class="settings-row">
+            <div style="flex:1;">
+                <label for="api-key-input">Clé API Agnes AI</label>
+                <input type="password" id="api-key-input" placeholder="sk-...">
+            </div>
+            <button class="btn" style="width:auto; padding:0.85rem 1.5rem;" onclick="saveApiKey()">Sauvegarder</button>
+        </div>
+        <p class="settings-hint">Stockée localement. Jamais envoyée ailleurs qu'à l'API Agnes AI.</p>
+    </div>
+
+    <!-- Indicateur de phase -->
+    <div class="phase-indicator">
+        <div class="phase-dot active" id="phase-dot-1" title="Configuration"></div>
+        <div class="phase-dot" id="phase-dot-2" title="Propositions"></div>
+        <div class="phase-dot" id="phase-dot-3" title="Film complet"></div>
+    </div>
+
+    <!-- ========== PHASE 1 : CONFIGURATION ========== -->
+    <div id="phase-1" class="panel visible">
+        <div class="panel-title">🎬 Étape 1 — Configuration du film</div>
+
+        <div class="form-panel" style="margin-bottom: 0;">
+            <div class="form-row">
+                <div style="flex:1 1 100%;">
+                    <label for="user-scenario">Scénario / Idée du film</label>
+                    <textarea id="user-scenario" placeholder="Ex : Des chats extraterrestres maîtres de kung-fu débarquent sur Terre pour sauver les animaux d'un capitalisme dévoyé…"></textarea>
+                </div>
+            </div>
+            <div class="form-row">
+                <div style="flex:1 1 100%;">
+                    <label for="character-desc">Description du personnage principal</label>
+                    <textarea id="character-desc" placeholder="Ex : Un chat noir élégant, maître Shaolin, robe de moine usée, yeux dorés, posture toujours droite…"></textarea>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div style="flex:1 1 100%;">
+                    <label>Photo du personnage (optionnel)</label>
+                    <div class="upload-area" id="upload-area">
+                        <input type="file" id="file-input" accept="image/*">
+                        <div class="upload-icon">🖼️</div>
+                        <div class="upload-text">Cliquez ou glissez une photo ici</div>
+                        <div class="upload-hint">PNG, JPG, WEBP — max 10 MB</div>
+                        <img id="preview-thumb" class="preview-thumb" alt="Aperçu">
+                    </div>
+                    <button class="btn btn-secondary btn-small" onclick="clearImage()" style="width:auto;">Retirer l'image</button>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div style="flex:1 1 100%;">
+                    <label for="dance-style">Style de mouvement / danse</label>
+                    <select id="dance-style">
+                        <option value="shaolin">🥋 Kung-fu Shaolin (mouvements fluides, katas)</option>
+                        <option value="hiphop">💃 Hip-hop (mouvements urbains, décontractés)</option>
+                        <option value="hyper-artistique">🎨 Hyper artistique (mouvements expressifs, théâtraux)</option>
+                        <option value="excentrique">🤪 Complètement excentrique (mouvements imprévisibles, absurdes)</option>
+                        <option value="contemporain">🩰 Danse contemporaine (mouvements fluides, abstraits)</option>
+                        <option value="robot">🤖 Mouvements saccadés de robot (mécaniques, précis)</option>
+                        <option value="custom">✏️ Personnalisé (je décris moi-même)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row" id="custom-dance-row" style="display:none;">
+                <div style="flex:1 1 100%;">
+                    <label for="custom-dance">Décrivez le style de mouvement souhaité</label>
+                    <textarea id="custom-dance" placeholder="Ex : Des mouvements lents et majestueux, comme une danse rituelle orientale…"></textarea>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div style="flex:1 1 100%;">
+                    <label for="auto-prompt-check" style="display:flex; align-items:center; gap:0.5rem; text-transform:none; letter-spacing:0; font-size:0.85rem; color:var(--text);">
+                        <input type="checkbox" id="auto-prompt-check" checked style="width:auto;">
+                        L'IA génère automatiquement les 10 scènes à partir du scénario
+                    </label>
+                </div>
+            </div>
+
+            <button id="start-phase-1-btn" class="btn" onclick="startPhase1()">🎬 Générer 4 propositions rapides</button>
+            <div id="error-box" class="error-box"></div>
+        </div>
+    </div>
+
+    <!-- ========== PHASE 2 : PROPOSITIONS ========== -->
+    <div id="phase-2" class="panel">
+        <div class="panel-title">🎬 Étape 2 — Choisissez votre style</div>
+        <div class="status-line">
+            <span class="dot"></span>
+            <span id="proposal-status-text">Génération des 4 propositions…</span>
+            <span id="proposal-cooldown-badge" class="cooldown-badge" style="display:none;"></span>
+        </div>
+        <p style="font-size:0.85rem; color:var(--text-dim); margin-bottom:1rem;">
+            Cliquez sur la proposition que vous préférez. Elle servira de base visuelle pour les 10 clips du film complet.
+        </p>
+        <div class="proposals-grid" id="proposals-grid"></div>
+        <div style="margin-top:1.5rem; display:flex; gap:1rem; flex-wrap:wrap;">
+            <button class="btn" id="validate-btn" onclick="validateChoice()" disabled>✅ Valider mon choix et créer le film</button>
+            <button class="btn btn-secondary" onclick="resetToPhase1()" style="width:auto;">← Retour</button>
+        </div>
+    </div>
+
+    <!-- ========== PHASE 3 : FILM COMPLET ========== -->
+    <div id="phase-3" class="panel">
+        <div class="panel-title">🎬 Étape 3 — Création du film complet</div>
+
+        <div id="bible-panel" class="panel" style="margin-bottom:1rem;">
+            <div class="panel-title">📖 Bible du film</div>
+            <div id="bible-content"></div>
+        </div>
+
+        <div id="scenes-panel" class="panel" style="margin-bottom:1rem;">
+            <div class="panel-title">🎞️ Découpage — 10 scènes</div>
+            <div id="scenes-content"></div>
+        </div>
+
+        <div id="progress-panel" class="panel visible" style="margin-bottom:1rem;">
+            <div class="status-line">
+                <span class="dot"></span>
+                <span id="global-status-text">Initialisation…</span>
+                <span id="cooldown-badge" class="cooldown-badge" style="display:none;"></span>
+            </div>
+            <div id="clips-grid" class="clips-grid"></div>
+        </div>
+
+        <div id="gallery-panel" class="panel" style="margin-bottom:1rem;">
+            <div class="panel-title" id="gallery-title">✦ Vos clips apparaîtront ici ✦</div>
+            <div id="video-grid" class="video-grid"></div>
+        </div>
+    </div>
+
+    <div id="log-box" class="log-box"></div>
+
+    <div class="history-section">
+        <div class="history-title">📚 Historique de vos créations</div>
+        <div id="history-container">
+            <div class="history-empty" id="history-empty">Aucune vidéo enregistrée pour le moment.</div>
+            <div class="history-grid" id="history-grid"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ==================================================================
+// CONFIGURATION
+// ==================================================================
+const DEFAULT_API_KEY = "sk-DZ8qTzDZ9fWahefwquW7I3a0acKnlVCP7trguNigNJrQgQAL";
+const BASE_URL = "https://apihub.agnes-ai.com/v1";
+const RAW_URL  = "https://apihub.agnes-ai.com";
+
+const MODELS = { text: "agnes-2.0-flash", video: "agnes-video-v2.0" };
+
+// ── Paramètres vidéo ──────────────────────────────────────────────
+// Vidéos courtes : 81 frames ≈ 3.4 s à 24 fps (pour les propositions)
+const SHORT_NUM_FRAMES = 81;
+// Vidéos du film : 121 frames ≈ 5 s à 24 fps
+const FILM_NUM_FRAMES = 121;
+const FRAME_RATE = 24;
+const MAX_CLIPS = 20;
+
+// ── Timings (RPM gratuits) ────────────────────────────────────────
+const TEXT_INTER_CALL_DELAY_MS = 10000;
+const PRE_VIDEO_DELAY_MS = 65000;
+const FIRST_POLL_DELAY_MS = 60000;
+const POLL_INTERVAL_MS = 15000;
+const MAX_POLL_ATTEMPTS = 30;
+const INTER_VIDEO_DELAY_MS = 65000;
+
+// ── Backoff 429 ───────────────────────────────────────────────────
+const RATE_LIMIT_BACKOFF_SEC = [60, 120, 180, 240, 300];
+const MAX_RATE_LIMIT_RETRIES = 5;
+
+// ==================================================================
+// 4 STYLES DE PROPOSITIONS
+// ==================================================================
+const PROPOSAL_STYLES = [
+    {
+        id: "manga",
+        name: "Manga / Anime",
+        icon: "📖",
+        promptStyle: "Japanese anime style, cel-shaded 2D animation, crisp ink outlines, expressive eyes, dynamic action lines, Studio Ghibli meets modern shonen aesthetic"
+    },
+    {
+        id: "noir",
+        name: "Film Noir N&B",
+        icon: "🖤",
+        promptStyle: "Classic film noir, high contrast chiaroscuro lighting, deep shadows, venetian blind shadows, 1940s detective aesthetic, black and white cinematography, German Expressionism influence"
+    },
+    {
+        id: "cyberpunk",
+        name: "Cyberpunk",
+        icon: "🌃",
+        promptStyle: "Cyberpunk futuristic aesthetic, neon pink and cyan lighting, rain-slicked streets, holographic advertisements, Blade Runner atmosphere, chromatic aberration, lens flares"
+    },
+    {
+        id: "scifi",
+        name: "Science-Fiction",
+        icon: "🚀",
+        promptStyle: "Epic science-fiction cinematic style, Denis Villeneuve inspired, monochromatic desaturated palette, atmospheric haze, monumental scale, brutalist architecture, vast negative space, golden sand tones with cool blue shadows"
+    }
+];
+
+// ==================================================================
+// 10 STYLES DE RÉALISATEURS POUR LE FILM
+// ==================================================================
+const DIRECTOR_STYLES = [
+    { name: "Wes Anderson", cluster: "Perfectly symmetrical composition, planimetric staging, flat frontal framing, pastel color palette, meticulous production design, slow dolly-in, flat 40mm telephoto lens, centered subject" },
+    { name: "Stanley Kubrick", cluster: "One-point perspective, symmetrical centering, slow zoom, wide-angle interiors, geometric order, formal ritualized blocking, cool observational distance, restrained exact color palette" },
+    { name: "Denis Villeneuve", cluster: "Monumental scale, monochromatic desaturated palette blocks, atmospheric haze, long lenses, negative-space blocking, brutalist architecture, minimal contrast, golden sand tones with cool blue shadows" },
+    { name: "David Fincher", cluster: "Locked frames, slow precise push-ins, underexposure, cool desaturated palette, deep shadows, controlled symmetry, 85:15 dark-to-light ratio, meticulous camera placement" },
+    { name: "Hayao Miyazaki", cluster: "Hand-painted watercolor textures, soft midday light, lush green landscapes, cel-shaded characters, warm afternoon light, painterly cumulus sky, gentle breeze through grass, muted earth tones" },
+    { name: "Wong Kar-wai", cluster: "Split-toned amber and emerald palette, slow shutter motion smear, 2.40:1 hard matte, saturated moody colors, neon reflections on wet surfaces, intimate framing, romantic melancholy" },
+    { name: "Roger Deakins", cluster: "Motivated practical lighting, warm shadow fill, subtle lens distortion, naturalistic light sources, precise exposure, elegant wide compositions, muted color palette, deep focus" },
+    { name: "Christopher Nolan", cluster: "IMAX scale, epic practical effects, cold blue-grey palette, monumental architecture, deep focus, sweeping crane shots, orchestral visual rhythm, high contrast" },
+    { name: "Guillermo del Toro", cluster: "Rich amber and teal palette, gothic romanticism, practical creature effects, warm candlelight, intricate production design, fairy-tale darkness, ornate textures" },
+    { name: "Nicolas Winding Refn", cluster: "Neon-soaked magenta and cyan palette, hypnotic slow motion, minimalist dialogue, symmetrical compositions, synthwave aesthetic, brutal elegance, shallow depth of field" }
+];
+
+// ==================================================================
+// STYLES DE MOUVEMENT
+// ==================================================================
+const DANCE_STYLES = {
+    "shaolin": "Shaolin kung-fu movements, flowing katas, martial arts precision, deliberate and graceful gestures, balanced stances, flowing between positions like a dance",
+    "hiphop": "Hip-hop dance movements, urban style, relaxed and rhythmic gestures, body isolations, popping and locking, street dance energy",
+    "hyper-artistique": "Hyper artistic theatrical movements, expressive gestures, dramatic poses, contemporary dance influence, emotional body language, avant-garde performance",
+    "excentrique": "Completely eccentric and unpredictable movements, absurd gestures, whimsical body language, surprising transitions, joyful chaos, burlesque energy",
+    "contemporain": "Contemporary dance movements, fluid and abstract gestures, weight shifting, floor work, organic transitions, minimalist expressiveness",
+    "robot": "Robotic jerky movements, mechanical precision, stop-motion like gestures, angular body language, sudden pauses, android-like motion",
+    "custom": ""
+};
+
+// ==================================================================
+// INDEXEDDB
+// ==================================================================
+const DB_NAME = "CineIADB_v3";
+const DB_VERSION = 1;
+const STORE = "videos";
+let db = null;
+
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => { db = req.result; resolve(db); };
+        req.onupgradeneeded = (e) => {
+            const d = e.target.result;
+            if (!d.objectStoreNames.contains(STORE)) {
+                const s = d.createObjectStore(STORE, { keyPath: "id", autoIncrement: true });
+                s.createIndex("timestamp", "timestamp", { unique: false });
+            }
+        };
+    });
+}
+function saveVideoToDB(data) {
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, "readwrite");
+        const req = tx.objectStore(STORE).add(data);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+function getAllVideosFromDB() {
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, "readonly");
+        const req = tx.objectStore(STORE).getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+// ==================================================================
+// STATE
+// ==================================================================
+let state = {
+    isRunning: false,
+    referenceImageDataUri: null,
+    scenario: "",
+    characterDesc: "",
+    danceStyleKey: "shaolin",
+    customDance: "",
+    proposals: [],
+    selectedProposal: null,
+    bible: null,
+    scenes: [],
+    clips: []
+};
+
+// ==================================================================
+// UTILS
+// ==================================================================
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function log(msg, cls = "") {
+    const el = document.getElementById("log-box");
+    el.classList.add("visible");
+    const d = document.createElement("div");
+    d.className = cls;
+    d.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    el.appendChild(d);
+    el.scrollTop = el.scrollHeight;
+}
+function setStatus(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+}
+function showCooldown(badgeId, sec) {
+    const el = document.getElementById(badgeId);
+    if (!el) return;
+    if (sec > 0) { el.textContent = `⏸ pause ${sec}s`; el.style.display = "inline-block"; }
+    else { el.style.display = "none"; }
+}
+function showError(msg) {
+    const el = document.getElementById("error-box");
+    el.textContent = msg; el.classList.add("visible");
+}
+function clearError() {
+    const el = document.getElementById("error-box");
+    el.textContent = ""; el.classList.remove("visible");
+}
+function esc(s) {
+    return String(s ?? "").replace(/[&<>"']/g, c => (
+        {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]
+    ));
+}
+function setPhase(n) {
+    document.querySelectorAll(".phase-dot").forEach((d, i) => {
+        d.classList.remove("active", "done");
+        if (i + 1 < n) d.classList.add("done");
+        else if (i + 1 === n) d.classList.add("active");
+    });
+    document.getElementById("phase-1").classList.toggle("visible", n === 1);
+    document.getElementById("phase-2").classList.toggle("visible", n === 2);
+    document.getElementById("phase-3").classList.toggle("visible", n === 3);
+}
+
+async function countdown(seconds, statusId, badgeId, label) {
+    for (let s = seconds; s > 0; s--) {
+        if (!state.isRunning) throw new Error("Annulé");
+        setStatus(statusId, `${label} (${s}s)`);
+        showCooldown(badgeId, s);
+        await sleep(1000);
+    }
+    showCooldown(badgeId, 0);
+}
+
+// ==================================================================
+// API FETCH AVEC GESTION 429
+// ==================================================================
+async function apiFetch(url, options = {}, label = "API") {
+    for (let attempt = 0; attempt <= MAX_RATE_LIMIT_RETRIES; attempt++) {
+        const res = await fetch(url, options);
+        if (res.status !== 429) return res;
+        if (attempt === MAX_RATE_LIMIT_RETRIES) {
+            log(`${label} : rate limit persistant.`, "err");
+            return res;
+        }
+        const waitSec = RATE_LIMIT_BACKOFF_SEC[attempt] || 300;
+        log(`⚠️ ${label} : RATE LIMIT 429. Attente ${waitSec}s…`, "warn");
+        try {
+            for (let s = waitSec; s > 0; s--) {
+                if (!state.isRunning) throw new Error("Annulé");
+                setStatus("proposal-status-text", `⏸ Rate limit — reprise dans ${s}s`);
+                showCooldown("proposal-cooldown-badge", s);
+                await sleep(1000);
+            }
+            showCooldown("proposal-cooldown-badge", 0);
+        } catch (e) { throw new Error("Annulé pendant le cooldown"); }
+    }
+    throw new Error("apiFetch : sortie de boucle inattendue");
+}
+
+function apiHeaders() {
+    return { "Authorization": `Bearer ${getApiKey()}`, "Content-Type": "application/json" };
+}
+function getApiKey() {
+    return (localStorage.getItem("agnes_api_key") || "").trim() || DEFAULT_API_KEY;
+}
+function saveApiKey() {
+    const v = document.getElementById("api-key-input").value.trim();
+    if (!v) { alert("Clé vide."); return; }
+    localStorage.setItem("agnes_api_key", v);
+    log("Clé API sauvegardée localement.", "ok");
+}
+
+// ==================================================================
+// CONVERSION IMAGE → BASE64
+// ==================================================================
+function fileToDataUri(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = () => reject(new Error("Erreur lecture fichier."));
+        reader.readAsDataURL(file);
+    });
+}
+
+// ==================================================================
+// PHASE 1 — GÉNÉRATION DES 4 PROPOSITIONS
+// ==================================================================
+async function startPhase1() {
+    if (state.isRunning) return;
+
+    const scenario = document.getElementById("user-scenario").value.trim();
+    if (!scenario) { showError("Décris d'abord ton scénario."); return; }
+
+    const characterDesc = document.getElementById("character-desc").value.trim();
+    const danceKey = document.getElementById("dance-style").value;
+    const customDance = document.getElementById("custom-dance").value.trim();
+    const autoPrompt = document.getElementById("auto-prompt-check").checked;
+
+    if (danceKey === "custom" && !customDance) {
+        showError("Décris ton style de mouvement personnalisé.");
+        return;
+    }
+
+    state.scenario = scenario;
+    state.characterDesc = characterDesc;
+    state.danceStyleKey = danceKey;
+    state.customDance = customDance;
+
+    const btn = document.getElementById("start-phase-1-btn");
+    btn.disabled = true;
+    state.isRunning = true;
+
+    clearError();
+    document.getElementById("log-box").innerHTML = "";
+    document.getElementById("proposals-grid").innerHTML = "";
+    document.getElementById("validate-btn").disabled = true;
+    state.proposals = [];
+    state.selectedProposal = null;
+
+    setPhase(2);
+    setStatus("proposal-status-text", "Génération des 4 propositions…");
+
+    try {
+        log("🎬 Phase 1 — Génération des 4 propositions rapides", "hl");
+        log(`Scénario : ${scenario.slice(0, 100)}...`, "");
+        log(`Style de mouvement : ${danceKey}`, "");
+
+        // Générer les 4 propositions en parallèle
+        const promises = PROPOSAL_STYLES.map((style, i) =>
+            generateSingleProposal(style, i, scenario, characterDesc, danceKey, customDance)
+        );
+
+        const results = await Promise.allSettled(promises);
+
+        for (let i = 0; i < results.length; i++) {
+            if (results[i].status === "fulfilled") {
+                state.proposals.push(results[i].value);
+                log(`Proposition ${i + 1} (${PROPOSAL_STYLES[i].name}) : OK`, "ok");
+            } else {
+                log(`Proposition ${i + 1} (${PROPOSAL_STYLES[i].name}) : échec — ${results[i].reason?.message || "erreur"}`, "err");
+                state.proposals.push(null);
+            }
+        }
+
+        renderProposals();
+        const okCount = state.proposals.filter(p => p && p.url).length;
+        setStatus("proposal-status-text", `${okCount}/4 propositions générées. Cliquez sur celle que vous préférez.`);
+        log(`Phase 1 terminée — ${okCount}/4 propositions.`, okCount > 0 ? "ok" : "err");
+
+        if (okCount === 0) {
+            showError("Aucune proposition n'a pu être générée.");
+            setPhase(1);
+        }
+
+    } catch (err) {
+        log(`Erreur phase 1 : ${err.message}`, "err");
+        showError(err.message);
+        setPhase(1);
+    } finally {
+        state.isRunning = false;
+        btn.disabled = false;
+    }
+}
+
+async function generateSingleProposal(style, index, scenario, characterDesc, danceKey, customDance) {
+    // Construire le prompt de la proposition courte
+    const danceDesc = danceKey === "custom" ? customDance : DANCE_STYLES[danceKey];
+
+    const prompt = `${style.promptStyle}. ${characterDesc ? `Character: ${characterDesc}.` : ""} Action: a short dance sequence with ${danceDesc}. Scene: a mysterious, cinematic environment. Camera: slow, dynamic movement. Lighting: dramatic. Mood: intense and artistic. Sound design: minimal foley sounds, soft ambient textures, no music. cinematic, 9:16 vertical, 24fps.`;
+
+    log(`Proposition ${index + 1} — ${style.name} : création…`, "hl");
+
+    // Créer la tâche vidéo courte (81 frames ≈ 3.4s)
+    const body = {
+        model: MODELS.video,
+        prompt: prompt,
+        num_frames: SHORT_NUM_FRAMES,
+        frame_rate: FRAME_RATE
+    };
+    if (state.referenceImageDataUri) {
+        body.image = state.referenceImageDataUri;
+    }
+
+    const res = await apiFetch(`${BASE_URL}/videos`, {
+        method: "POST", headers: apiHeaders(), body: JSON.stringify(body)
+    }, `Proposition ${index + 1} · Création`);
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+    const videoId = data.video_id || data.id || data.task_id;
+    if (!videoId) throw new Error("Pas de video_id retourné.");
+
+    log(`Proposition ${index + 1} : tâche créée (${String(videoId).slice(0, 30)}…)`, "ok");
+
+    // Polling
+    const url = await pollVideo(videoId, `Proposition ${index + 1}`);
+    return { style, url, videoId, prompt };
+}
+
+// ==================================================================
+// POLLING GÉNÉRIQUE
+// ==================================================================
+async function pollVideo(videoId, label) {
+    // Attente initiale
+    let remaining = Math.floor(FIRST_POLL_DELAY_MS / 1000);
+    while (remaining > 0 && state.isRunning) {
+        setStatus("proposal-status-text", `${label} : attente initiale… (${remaining}s)`);
+        showCooldown("proposal-cooldown-badge", remaining);
+        await sleep(1000);
+        remaining--;
+    }
+    if (!state.isRunning) throw new Error("Annulé");
+
+    for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
+        if (!state.isRunning) throw new Error("Annulé");
+        if (attempt > 0) {
+            let r = Math.floor(POLL_INTERVAL_MS / 1000);
+            while (r > 0 && state.isRunning) {
+                setStatus("proposal-status-text", `${label} : vérification ${attempt + 1}… (${r}s)`);
+                showCooldown("proposal-cooldown-badge", r);
+                await sleep(1000);
+                r--;
+            }
+        }
+
+        log(`${label} : vérification n°${attempt + 1}…`, "hl");
+        const url = `${RAW_URL}/agnesapi?video_id=${encodeURIComponent(videoId)}&model_name=${encodeURIComponent(MODELS.video)}`;
+        try {
+            const r = await apiFetch(url, { method: "GET", headers: apiHeaders() },
+                `${label} · Poll`);
+            const d = await r.json();
+            const status = d.status || "unknown";
+            const progress = d.progress ?? 0;
+            log(`${label} : statut="${status}", progression=${progress}%`);
+            setStatus("proposal-status-text", `${label} : ${progress}%`);
+
+            if (status === "completed" || status === "succeeded") {
+                const videoUrl = d.metadata?.url || d.url || d.output?.url;
+                if (!videoUrl) throw new Error("Terminé mais pas d'URL.");
+                log(`${label} : TERMINÉ !`, "ok");
+                return videoUrl;
+            }
+            if (status === "failed" || status === "error")
+                throw new Error("La génération a échoué.");
+        } catch (err) {
+            if (err.message.includes("échoué") || err.message.includes("URL")) throw err;
+            log(`${label} : erreur polling (${err.message}), on réessaie…`, "warn");
+        }
+    }
+    throw new Error("Délai maximal dépassé.");
+}
+
+// ==================================================================
+// RENDU DES PROPOSITIONS
+// ==================================================================
+function renderProposals() {
+    const grid = document.getElementById("proposals-grid");
+    grid.innerHTML = "";
+
+    PROPOSAL_STYLES.forEach((style, i) => {
+        const p = state.proposals[i];
+        const card = document.createElement("div");
+        card.className = "proposal-card";
+        card.id = `proposal-${i}`;
+
+        if (p && p.url) {
+            card.innerHTML = `
+                <video controls preload="metadata" muted playsinline>
+                    <source src="${p.url}" type="video/mp4">
+                </video>
+                <div class="proposal-label">
+                    <div class="director-name">${style.icon} ${style.name}</div>
+                    <div class="proposal-status">✅ Prêt — cliquez pour choisir</div>
+                </div>
+            `;
+            card.addEventListener("click", () => selectProposal(i));
+        } else {
+            card.innerHTML = `
+                <div style="aspect-ratio:9/16; display:flex; align-items:center; justify-content:center; background:#111; color:#555;">
+                    <div style="text-align:center;">
+                        <div style="font-size:2rem;">${style.icon}</div>
+                        <div style="margin-top:0.5rem; font-size:0.8rem;">Échec</div>
+                    </div>
+                </div>
+                <div class="proposal-label">
+                    <div class="director-name">${style.name}</div>
+                    <div class="proposal-status">❌ Non généré</div>
+                </div>
+            `;
+        }
+        grid.appendChild(card);
+    });
+}
+
+function selectProposal(index) {
+    state.selectedProposal = index;
+    document.querySelectorAll(".proposal-card").forEach((c, i) => {
+        c.classList.toggle("selected", i === index);
+    });
+    document.getElementById("validate-btn").disabled = false;
+    log(`Proposition sélectionnée : ${PROPOSAL_STYLES[index].name}`, "ok");
+}
+
+// ==================================================================
+// VALIDATION — LANCEMENT DU FILM COMPLET
+// ==================================================================
+async function validateChoice() {
+    if (state.selectedProposal === null) return;
+
+    const selectedStyle = PROPOSAL_STYLES[state.selectedProposal];
+    log(`✅ Style choisi : ${selectedStyle.name}`, "hl");
+    log("Lancement de la création du film complet (10 clips)…", "hl");
+
+    setPhase(3);
+    document.getElementById("bible-content").innerHTML = "";
+    document.getElementById("scenes-content").innerHTML = "";
+    document.getElementById("video-grid").innerHTML = "";
+    document.getElementById("clips-grid").innerHTML = "";
+    document.getElementById("bible-panel").classList.remove("visible");
+    document.getElementById("scenes-panel").classList.remove("visible");
+    document.getElementById("gallery-panel").classList.remove("visible");
+    document.getElementById("gallery-title").textContent = "✦ Vos clips apparaîtront ici ✦";
+    document.getElementById("progress-panel").classList.add("visible");
+
+    state.bible = null;
+    state.scenes = [];
+    state.clips = [];
+
+    try {
+        // 1. Générer la bible + les 10 scènes
+        setStatus("global-status-text", "L'agent écrit le scénario complet…");
+        const { bible, scenes } = await generateFullFilm(
+            state.scenario, state.characterDesc, selectedStyle,
+            state.danceStyleKey, state.customDance
+        );
+        state.bible = bible;
+        state.scenes = scenes;
+
+        renderBible(bible);
+        renderScenes(scenes);
+
+        log(`Titre : ${bible.film_title}`, "ok");
+        log(`Personnages : ${bible.characters.map(c => c.name).join(", ")}`, "ok");
+
+        // 2. Init clips
+        state.clips = scenes.map((s, i) => ({
+            id: i + 1,
+            title: s.title,
+            status: "pending",
+            timerDisplay: "--",
+            statusText: "File d'attente",
+            videoUrl: null,
+            videoId: null,
+            dialogue: s.dialogue,
+            dialogue_speaker: s.dialogue_speaker,
+            prompt: s.video_prompt || "",
+            director: s.director_style || ""
+        }));
+        renderClips();
+
+        // 3. Pause pré-vidéo
+        log(`Pause de ${PRE_VIDEO_DELAY_MS / 1000}s avant le premier clip…`, "warn");
+        await countdown(
+            Math.floor(PRE_VIDEO_DELAY_MS / 1000),
+            "global-status-text", "cooldown-badge",
+            "⏸ Pause pré-vidéo"
+        );
+
+        // 4. Génération séquentielle des 10 clips
+        let successCount = 0;
+
+        for (let i = 0; i < scenes.length; i++) {
+            if (!state.isRunning) break;
+            const s = scenes[i];
+
+            log(`━━━━ Clip ${i + 1}/${scenes.length} — ${s.title} (${s.director_style}) ━━━━`, "hl");
+            setStatus("global-status-text", `Clip ${i + 1}/${scenes.length} : création…`);
+
+            let videoId;
+            try {
+                updateClip(i, { status: "processing", statusText: "Création tâche…" });
+
+                // Créer la tâche vidéo
+                const body = {
+                    model: MODELS.video,
+                    prompt: s.video_prompt,
+                    num_frames: FILM_NUM_FRAMES,
+                    frame_rate: FRAME_RATE
+                };
+                if (state.referenceImageDataUri) {
+                    body.image = state.referenceImageDataUri;
+                }
+
+                const res = await apiFetch(`${BASE_URL}/videos`, {
+                    method: "POST", headers: apiHeaders(), body: JSON.stringify(body)
+                }, `Clip ${i + 1} · Création`);
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+                videoId = data.video_id || data.id || data.task_id;
+                if (!videoId) throw new Error("Pas de video_id retourné.");
+
+                log(`Clip ${i + 1} : tâche créée (${String(videoId).slice(0, 30)}…)`, "ok");
+                updateClip(i, { videoId, statusText: "Attente initiale" });
+
+            } catch (err) {
+                log(`Clip ${i + 1} : échec création — ${err.message}`, "err");
+                updateClip(i, { status: "failed", statusText: "Échec création" });
+                if (i < scenes.length - 1 && state.isRunning) {
+                    await countdown(
+                        Math.floor(INTER_VIDEO_DELAY_MS / 1000),
+                        "global-status-text", "cooldown-badge",
+                        "⏸ Pause inter-clip"
+                    );
+                }
+                continue;
+            }
+
+            try {
+                const url = await pollVideo(videoId, `Clip ${i + 1}`);
+                updateClip(i, { status: "done", videoUrl: url, timerDisplay: "✓", statusText: "Terminé" });
+                addVideoToGallery(i, url, s.title, s.dialogue, s.dialogue_speaker, s.director_style);
+                document.getElementById("gallery-panel").classList.add("visible");
+                successCount++;
+
+                try {
+                    await saveVideoToDB({
+                        url, style: selectedStyle.name,
+                        filmTitle: bible.film_title,
+                        sceneTitle: s.title, prompt: s.video_prompt,
+                        dialogue: s.dialogue || "",
+                        timestamp: Date.now()
+                    });
+                    log(`Clip ${i + 1} : sauvegardé.`, "ok");
+                } catch (dbErr) { log(`Clip ${i + 1} : erreur DB — ${dbErr.message}`, "warn"); }
+            } catch (err) {
+                log(`Clip ${i + 1} : ${err.message}`, "err");
+                updateClip(i, { status: "failed", statusText: "Échec génération" });
+            }
+
+            if (i < scenes.length - 1 && state.isRunning) {
+                log(`Pause de ${INTER_VIDEO_DELAY_MS / 1000}s avant le clip suivant…`, "warn");
+                await countdown(
+                    Math.floor(INTER_VIDEO_DELAY_MS / 1000),
+                    "global-status-text", "cooldown-badge",
+                    "⏸ Pause inter-clip"
+                );
+            }
+        }
+
+        // Bilan
+        if (successCount > 0) {
+            setStatus("global-status-text", `✦ ${successCount}/${scenes.length} clips générés — « ${bible.film_title} » ✦`);
+            log(`Workflow terminé — ${successCount}/${scenes.length}.`, "ok");
+            await loadHistory();
+        } else {
+            setStatus("global-status-text", "Aucune vidéo générée.");
+            showError("Toutes les générations ont échoué.");
+        }
+
+    } catch (err) {
+        log(`Erreur film : ${err.message}`, "err");
+        showError(err.message);
+        setStatus("global-status-text", "Erreur : " + err.message);
+    } finally {
+        state.isRunning = false;
+        document.getElementById("start-phase-1-btn").disabled = false;
+        showCooldown("cooldown-badge", 0);
+    }
+}
+
+// ==================================================================
+// GÉNÉRATION DU FILM COMPLET (BIBLE + 10 SCÈNES)
+// ==================================================================
+async function generateFullFilm(scenario, characterDesc, selectedStyle, danceKey, customDance) {
+    const danceDesc = danceKey === "custom" ? customDance : DANCE_STYLES[danceKey];
+    const directorList = DIRECTOR_STYLES.map((s, i) => `${i + 1}. ${s.name} — ${s.cluster}`).join("\n");
+
+    const systemPrompt = `You are an award-winning film director and screenwriter. You are creating a SHORT FILM divided into exactly 10 sequential video clips. Each clip = ONE continuous shot of about 5 seconds. Together they must form ONE coherent short film with a complete narrative arc.
+
+USER'S FILM IDEA:
+"""
+${scenario}
+"""
+
+${characterDesc ? `MAIN CHARACTER DESCRIPTION:\n"""\n${characterDesc}\n"""` : ""}
+
+VISUAL STYLE (applies to the entire film): ${selectedStyle.name}
+STYLE CLUSTER: ${selectedStyle.promptStyle}
+
+MOVEMENT STYLE (applies to ALL characters in ALL scenes): ${danceDesc}
+
+═══════════════════════════════════════════════
+YOUR MISSION — BUILD THE FILM BIBLE + THE 10 SCENES
+═══════════════════════════════════════════════
+
+Three-act structure:
+- ACT I (Scenes 1-3): Setup — introduce world and characters
+- ACT II (Scenes 4-7): Development — conflict, encounters, rising tension
+- ACT III (Scenes 8-10): Resolution — climax and conclusion
+
+CRITICAL RULES:
+1. Every character must have an EXTREMELY DETAILED "appearance" description in English, reused VERBATIM in every video prompt.
+2. The "world" description must be a single verbose English block reused verbatim.
+3. The "visual_style_anchor" is a short English keyword block reused verbatim.
+4. EACH VIDEO PROMPT must follow this skeleton:
+   [VISUAL STYLE ANCHOR] + [WORLD] + [CHARACTERS with verbatim appearances] + [LOCATION] + [ACTION with dance movement] + [SHOT] + [LIGHTING] + [MOOD & SOUND] + [Tail]
+5. DIALOGUE: In FRENCH, literary, max 20 words per line. EVERY scene must have dialogue.
+6. SOUND: ONLY minimal foley and soft ambient sounds. NO MUSIC, no instruments.
+7. MOVEMENT: Every scene must include characters dancing or performing ${danceDesc}.
+
+AVAILABLE DIRECTOR STYLES (assign a different one to each scene):
+${directorList}
+
+OUTPUT — a single valid JSON object:
+{
+  "bible": {
+    "film_title": "string (in French)",
+    "logline": "string (in French)",
+    "tone": "string (in French)",
+    "color_palette": "string (in English)",
+    "characters": [
+      { "name": "string", "role": "string (in French)", "appearance": "Detailed English description, 40-80 words." }
+    ],
+    "world": "Detailed English description, 30-60 words.",
+    "visual_style_anchor": "Short English keyword block."
+  },
+  "scenes": [
+    {
+      "scene_number": 1,
+      "act": 1,
+      "title": "string (in French)",
+      "characters_present": ["name1"],
+      "location": "string",
+      "narrative_beat": "string (in French)",
+      "dialogue": "string (in French, must not be 'Aucun dialogue')",
+      "dialogue_speaker": "name or null",
+      "shot_type": "string",
+      "camera_movement": "string",
+      "lighting": "string (in English)",
+      "mood": "string (in French)",
+      "sound_design": "string (in English, ONLY foley/ambient)",
+      "director_style": "string (director name)",
+      "video_prompt": "English prompt following skeleton, under 900 chars, with verbatim anchor, world, appearances, and dance movement."
+    }
+  ]
+}
+
+Return EXACTLY 10 scenes. No filler.`;
+
+    log("Génération de la bible et des 10 scènes…", "hl");
+
+    const res = await apiFetch(`${BASE_URL}/chat/completions`, {
+        method: "POST", headers: apiHeaders(),
+        body: JSON.stringify({
+            model: MODELS.text,
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: `Crée le film complet à partir de : ${scenario}` }
+            ],
+            temperature: 0.85,
+            max_tokens: 12000
+        })
+    }, "Texte · Film complet");
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+
+    let content = data.choices?.[0]?.message?.content || "";
+    content = content.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+    const start = content.indexOf("{"); const end = content.lastIndexOf("}");
+    if (start >= 0 && end > start) content = content.slice(start, end + 1);
+
+    let parsed;
+    try { parsed = JSON.parse(content); }
+    catch (e) { throw new Error("JSON du film invalide."); }
+    if (!parsed.bible || !Array.isArray(parsed.scenes)) throw new Error("Structure invalide.");
+
+    parsed.scenes = parsed.scenes.slice(0, 10);
+    while (parsed.scenes.length < 10) {
+        const n = parsed.scenes.length + 1;
+        parsed.scenes.push({
+            scene_number: n,
+            act: n <= 3 ? 1 : (n <= 7 ? 2 : 3),
+            title: `Scène ${n}`,
+            characters_present: [],
+            location: "scène",
+            narrative_beat: "Scène de transition.",
+            dialogue: "Le mouvement dit tout ce que les mots ne peuvent exprimer.",
+            dialogue_speaker: null,
+            shot_type: "wide shot",
+            camera_movement: "slow pan",
+            lighting: "natural light",
+            mood: "contemplatif",
+            sound_design: "soft wind, distant birds",
+            director_style: "auto",
+            video_prompt: `${parsed.bible.visual_style_anchor} ${parsed.bible.world} Action: contemplative dance movement. Shot: wide, slow pan. Lighting: natural. Sound: soft wind. cinematic, 9:16 vertical, 24fps.`
+        });
+    }
+
+    log(`Bible + 10 scènes générées.`, "ok");
+    return parsed;
+}
+
+// ==================================================================
+// RENDUS
+// ==================================================================
+function renderBible(bible) {
+    const el = document.getElementById("bible-content");
+    el.innerHTML = `
+        <div class="bible-title">${esc(bible.film_title || "Sans titre")}</div>
+        <div class="bible-logline">${esc(bible.logline || "")}</div>
+        <div class="bible-section"><div class="bible-section-title">Ton</div><div class="bible-text">${esc(bible.tone || "")}</div></div>
+        <div class="bible-section"><div class="bible-section-title">Palette</div><div class="bible-text">${esc(bible.color_palette || "")}</div></div>
+        <div class="bible-section"><div class="bible-section-title">Personnages</div>
+            ${(bible.characters || []).map(c => `
+                <div class="character-card">
+                    <div class="character-name">${esc(c.name)}</div>
+                    <div class="character-role">${esc(c.role || "")}</div>
+                    <div class="character-appearance">${esc(c.appearance || "")}</div>
+                </div>
+            `).join("")}
+        </div>
+        <div class="bible-section"><div class="bible-section-title">Monde</div><div class="bible-text">${esc(bible.world || "")}</div></div>
+        <div class="bible-section"><div class="bible-section-title">Ancrage stylistique</div><div class="bible-text">${esc(bible.visual_style_anchor || "")}</div></div>
+    `;
+    document.getElementById("bible-panel").classList.add("visible");
+}
+
+function renderScenes(scenes) {
+    const el = document.getElementById("scenes-content");
+    el.innerHTML = scenes.map(s => `
+        <div class="scene-item">
+            <div class="scene-header">
+                <span class="scene-number">Scène ${s.scene_number}</span>
+                <span class="scene-act">Acte ${s.act || "?"}</span>
+                <span class="scene-act" style="background:#2a2035; color:var(--accent);">${esc(s.director_style || "auto")}</span>
+            </div>
+            <div class="scene-title">${esc(s.title || "")}</div>
+            <div class="scene-beat">${esc(s.narrative_beat || "")}</div>
+            ${s.dialogue ? `<div class="scene-dialogue">💬 ${s.dialogue_speaker ? esc(s.dialogue_speaker) + " — " : ""}« ${esc(s.dialogue)} »</div>` : ``}
+            <div class="scene-meta">
+                <span>🎥 ${esc(s.shot_type || "")}</span>
+                <span>🎬 ${esc(s.camera_movement || "")}</span>
+                <span>💡 ${esc(s.lighting || "")}</span>
+                <span>🎵 ${esc(s.sound_design || "")}</span>
+            </div>
+            ${s.video_prompt ? `<details style="margin-top:0.5rem;"><summary style="font-size:0.7rem; color:var(--accent-dark); cursor:pointer;">Prompt vidéo</summary><div class="scene-prompt">${esc(s.video_prompt)}</div></details>` : ``}
+        </div>
+    `).join("");
+    document.getElementById("scenes-panel").classList.add("visible");
+}
+
+function renderClips() {
+    const grid = document.getElementById("clips-grid");
+    grid.innerHTML = state.clips.map((c, i) => {
+        let icon = "◌", timer = "--", statusText = "En attente";
+        if (c.status === "pending") { icon = "◌"; timer = "Prêt"; statusText = "File d'attente"; }
+        else if (c.status === "processing") { icon = "◐"; timer = c.timerDisplay || "0s"; statusText = c.statusText || "Génération…"; }
+        else if (c.status === "done") { icon = "●"; timer = "✓"; statusText = "Terminé"; }
+        else if (c.status === "failed") { icon = "✕"; timer = "—"; statusText = "Échec"; }
+        return `
+            <div class="clip-card ${c.status}">
+                <div class="clip-number">Clip ${i + 1}</div>
+                <div class="clip-title">${esc(c.title || "")}</div>
+                <div class="clip-icon">${icon}</div>
+                <div class="clip-timer">${timer}</div>
+                <div class="clip-status-text">${statusText}</div>
+            </div>
+        `;
+    }).join("");
+}
+function updateClip(index, updates) {
+    Object.assign(state.clips[index], updates);
+    renderClips();
+}
+
+function addVideoToGallery(index, url, title, dialogue, speaker, directorName) {
+    const grid = document.getElementById("video-grid");
+    const item = document.createElement("div");
+    item.className = "video-item";
+    const dialogueHtml = dialogue ? `<div class="video-caption-dialogue">💬 ${speaker ? esc(speaker) + " — " : ""}« ${esc(dialogue)} »</div>` : "";
+    item.innerHTML = `
+        <video controls preload="metadata" autoplay muted playsinline>
+            <source src="${url}" type="video/mp4">
+        </video>
+        <div class="video-caption">
+            <div class="video-caption-title">Clip ${index + 1} — ${esc(title || "")}</div>
+            <div style="font-size:0.7rem; color:var(--text-dim);">🎬 ${esc(directorName || "")}</div>
+            ${dialogueHtml}
+        </div>
+    `;
+    grid.appendChild(item);
+    const n = grid.children.length;
+    document.getElementById("gallery-title").textContent = `✦ ${n} clip${n > 1 ? "s" : ""} prêt${n > 1 ? "s" : ""} ✦`;
+}
+
+async function loadHistory() {
+    try {
+        const videos = await getAllVideosFromDB();
+        const emptyEl = document.getElementById("history-empty");
+        const gridEl = document.getElementById("history-grid");
+        if (!videos.length) { emptyEl.style.display = "block"; gridEl.innerHTML = ""; return; }
+        emptyEl.style.display = "none";
+        videos.sort((a, b) => b.timestamp - a.timestamp);
+        gridEl.innerHTML = videos.map(v => `
+            <div class="history-item">
+                <video controls preload="metadata" muted playsinline>
+                    <source src="${v.url}" type="video/mp4">
+                </video>
+                <div class="history-meta">
+                    <span class="style">${esc(v.style || "")}</span><br>
+                    ${esc(v.filmTitle || "")}<br>
+                    ${new Date(v.timestamp).toLocaleString()}
+                </div>
+            </div>
+        `).join("");
+    } catch (e) { console.error("Historique :", e); }
+}
+
+// ==================================================================
+// UPLOAD IMAGE
+// ==================================================================
+const uploadArea = document.getElementById("upload-area");
+const fileInput = document.getElementById("file-input");
+const previewThumb = document.getElementById("preview-thumb");
+
+uploadArea.addEventListener("click", () => fileInput.click());
+uploadArea.addEventListener("dragover", (e) => { e.preventDefault(); uploadArea.classList.add("dragover"); });
+uploadArea.addEventListener("dragleave", () => uploadArea.classList.remove("dragover"));
+uploadArea.addEventListener("drop", (e) => {
+    e.preventDefault(); uploadArea.classList.remove("dragover");
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener("change", (e) => {
+    if (e.target.files.length) handleFile(e.target.files[0]);
+});
+
+async function handleFile(file) {
+    if (!file.type.startsWith("image/")) { alert("Fichier non image."); return; }
+    if (file.size > 10 * 1024 * 1024) { alert("Image trop lourde (max 10 MB)."); return; }
+    try {
+        const dataUri = await fileToDataUri(file);
+        state.referenceImageDataUri = dataUri;
+        previewThumb.src = dataUri;
+        previewThumb.classList.add("visible");
+        log(`Image de référence chargée (${(file.size / 1024).toFixed(0)} Ko).`, "ok");
+    } catch (err) { alert("Erreur : " + err.message); }
+}
+
+function clearImage() {
+    state.referenceImageDataUri = null;
+    fileInput.value = "";
+    previewThumb.src = "";
+    previewThumb.classList.remove("visible");
+    log("Image de référence retirée.", "");
+}
+
+function resetToPhase1() {
+    setPhase(1);
+    document.getElementById("validate-btn").disabled = true;
+    state.selectedProposal = null;
+}
+
+// Affichage conditionnel du champ "personnalisé"
+document.getElementById("dance-style").addEventListener("change", (e) => {
+    document.getElementById("custom-dance-row").style.display = e.target.value === "custom" ? "flex" : "none";
+});
+
+// ==================================================================
+// INIT
+// ==================================================================
+(async function init() {
+    const stored = localStorage.getItem("agnes_api_key");
+    if (stored) document.getElementById("api-key-input").value = stored;
+
+    try {
+        await openDB();
+        log("IndexedDB initialisée.", "ok");
+        await loadHistory();
+    } catch (e) {
+        log("Erreur IndexedDB : " + e.message, "err");
+    }
+    console.log("CinéIA — Prêt");
+})();
+</script>
+</body>
+</html>

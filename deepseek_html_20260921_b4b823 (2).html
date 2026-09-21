@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CinéIA Gamma — Générateur de Variantes Vidéo</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+        --bg: #0a0a0a; --panel: #151515; --panel-2: #1a1a1a; --border: #2a2a2a;
+        --accent: #c4b5fd; --accent-dark: #a78bfa; --text: #e0e0e0;
+        --text-dim: #888; --success: #4ade80; --error: #f87171; --warn: #facc15;
+    }
+    body {
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+        background: var(--bg); color: var(--text); min-height: 100vh;
+        display: flex; flex-direction: column; align-items: center; padding: 2rem 1rem;
+    }
+    .container { max-width: 1200px; width: 100%; }
+    header { text-align: center; margin-bottom: 2rem; }
+    h1 { font-size: 2rem; font-weight: 300; letter-spacing: 0.05em; color: #f0f0f0; }
+    .subtitle { color: var(--text-dim); font-size: 0.9rem; font-style: italic; margin-top: 0.3rem; }
+
+    .settings-toggle {
+        background: transparent; border: 1px solid var(--border); color: var(--text-dim);
+        padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.8rem; cursor: pointer;
+        margin-bottom: 1rem;
+    }
+    .settings-toggle:hover { border-color: var(--accent-dark); color: var(--accent); }
+    .settings-panel {
+        background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+        padding: 1.25rem; margin-bottom: 1.5rem; display: none;
+    }
+    .settings-panel.visible { display: block; }
+    .settings-row { display: flex; gap: 0.75rem; align-items: end; }
+    .settings-hint { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.5rem; }
+
+    .upload-area {
+        background: var(--panel); border: 2px dashed var(--border); border-radius: 16px;
+        padding: 3rem; margin-bottom: 2rem; text-align: center; cursor: pointer;
+        transition: border-color 0.2s, background 0.2s;
+    }
+    .upload-area:hover, .upload-area.dragover {
+        border-color: var(--accent-dark); background: #1a1525;
+    }
+    .upload-area input[type="file"] { display: none; }
+    .upload-icon { font-size: 3rem; margin-bottom: 1rem; }
+    .upload-text { font-size: 1.1rem; color: var(--text); margin-bottom: 0.5rem; }
+    .upload-hint { font-size: 0.85rem; color: var(--text-dim); }
+
+    .preview-area {
+        background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+        padding: 1.5rem; margin-bottom: 2rem; display: none;
+    }
+    .preview-area.visible { display: block; }
+    .preview-img { max-width: 100%; max-height: 300px; border-radius: 8px; display: block; margin: 0 auto 1rem auto; }
+
+    .btn {
+        padding: 1rem 2rem; background: var(--accent-dark); color: #0a0a0a;
+        border: none; border-radius: 10px; font-size: 1rem; font-weight: 600;
+        cursor: pointer; transition: background 0.2s, transform 0.1s; width: 100%;
+    }
+    .btn:hover:not(:disabled) { background: var(--accent); }
+    .btn:active:not(:disabled) { transform: scale(0.98); }
+    .btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+    .btn-secondary { background: #2a2a2a; color: var(--text); }
+    .btn-secondary:hover:not(:disabled) { background: #3a3a3a; }
+
+    .panel {
+        background: var(--panel); border: 1px solid var(--border);
+        border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; display: none;
+    }
+    .panel.visible { display: block; }
+    .panel-title {
+        font-size: 0.8rem; color: var(--accent-dark); text-transform: uppercase;
+        letter-spacing: 0.1em; margin-bottom: 1rem; font-weight: 600;
+    }
+
+    .status-line {
+        font-size: 0.9rem; color: var(--accent-dark); margin-bottom: 1rem;
+        display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+    }
+    .status-line .dot {
+        width: 8px; height: 8px; border-radius: 50%; background: var(--accent-dark);
+        animation: pulse 1.5s infinite; flex-shrink: 0;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .cooldown-badge {
+        background: #3a2a15; color: var(--warn); padding: 0.2rem 0.6rem;
+        border-radius: 6px; font-size: 0.75rem; font-weight: 600;
+    }
+
+    .video-grid {
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 1rem; margin-top: 1rem;
+    }
+    .video-item {
+        background: var(--panel-2); border-radius: 12px; overflow: hidden;
+        border: 1px solid var(--border); animation: fadeIn 0.6s ease-in;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .video-item video { width: 100%; display: block; aspect-ratio: 9/16; object-fit: cover; background: #000; }
+    .video-caption { padding: 0.7rem 0.8rem; background: var(--panel); }
+    .video-caption-title { font-size: 0.8rem; color: var(--accent); font-weight: 600; margin-bottom: 0.3rem; }
+    .video-caption-style { font-size: 0.7rem; color: var(--text-dim); }
+
+    .log-box {
+        margin-top: 1rem; padding: 0.75rem; background: #0f0f0f;
+        border-radius: 10px; border: 1px solid #222;
+        font-family: ui-monospace, monospace; font-size: 0.7rem; color: #666;
+        max-height: 220px; overflow-y: auto; display: none;
+    }
+    .log-box.visible { display: block; }
+    .log-box div { padding: 1px 0; }
+    .log-box .hl { color: var(--accent); }
+    .log-box .ok { color: var(--success); }
+    .log-box .err { color: var(--error); }
+    .log-box .warn { color: var(--warn); }
+
+    .error-box {
+        background: #2a1515; border: 1px solid var(--error); border-radius: 10px;
+        padding: 1rem; color: var(--error); font-size: 0.85rem;
+        margin-top: 1rem; display: none;
+    }
+    .error-box.visible { display: block; }
+
+    .history-section { margin-top: 3rem; border-top: 1px solid var(--border); padding-top: 2rem; }
+    .history-title { font-size: 1.1rem; font-weight: 300; color: var(--accent-dark); margin-bottom: 1rem; }
+    .history-empty { color: var(--text-dim); font-size: 0.85rem; font-style: italic; }
+    .history-grid {
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 0.75rem; margin-top: 1rem;
+    }
+    .history-item {
+        background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+    }
+    .history-item video { width: 100%; display: block; aspect-ratio: 9/16; object-fit: cover; }
+    .history-meta { padding: 0.5rem; font-size: 0.7rem; color: var(--text-dim); line-height: 1.4; }
+</style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>CinéIA Gamma</h1>
+            <p class="subtitle">Une image. Vingt variations. Un générateur de vidéos par IA.</p>
+        </header>
+
+        <button class="settings-toggle" onclick="document.getElementById('settings-panel').classList.toggle('visible')">
+            ⚙️ Paramètres API
+        </button>
+        <div id="settings-panel" class="settings-panel">
+            <div class="settings-row">
+                <div style="flex:1;">
+                    <label for="api-key-input">Clé API Agnes AI</label>
+                    <input type="password" id="api-key-input" placeholder="sk-...">
+                </div>
+                <button class="btn" style="width:auto; padding: 0.85rem 1.5rem;" onclick="saveApiKey()">Sauvegarder</button>
+            </div>
+            <p class="settings-hint">Stockée localement. Nécessaire pour les appels API.</p>
+        </div>
+
+        <div class="upload-area" id="upload-area">
+            <input type="file" id="file-input" accept="image/*">
+            <div class="upload-icon">🖼️</div>
+            <div class="upload-text">Cliquez ou glissez une image ici</div>
+            <div class="upload-hint">PNG, JPG, WEBP — max 10 MB</div>
+        </div>
+
+        <div class="preview-area" id="preview-area">
+            <img id="preview-img" class="preview-img" alt="Aperçu">
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <button class="btn" id="generate-btn" onclick="startGeneration()">🎬 Générer les variantes</button>
+                <button class="btn btn-secondary" onclick="resetUpload()">Changer d'image</button>
+            </div>
+        </div>
+
+        <div id="status-panel" class="panel">
+            <div class="status-line">
+                <span class="dot"></span>
+                <span id="global-status-text">Initialisation…</span>
+                <span id="cooldown-badge" class="cooldown-badge" style="display:none;"></span>
+            </div>
+            <div id="video-grid" class="video-grid"></div>
+        </div>
+
+        <div id="log-box" class="log-box"></div>
+
+        <div class="history-section">
+            <div class="history-title">📚 Historique de vos créations</div>
+            <div id="history-container">
+                <div class="history-empty" id="history-empty">Aucune vidéo enregistrée pour le moment.</div>
+                <div class="history-grid" id="history-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // CONFIGURATION
+        // ============================================================
+        const DEFAULT_API_KEY = "sk-DZ8qTzDZ9fWahefwquW7I3a0acKnlVCP7trguNigNJrQgQAL";
+        const AGNES_BASE_URL = "https://apihub.agnes-ai.com/v1";
+        const AGNES_RAW_URL = "https://apihub.agnes-ai.com";
+
+        const MODELS = {
+            text: "agnes-2.0-flash",
+            image: "agnes-image-2.1-flash",
+            video: "agnes-video-v2.0"
+        };
+
+        // ── Pipeline de génération ──────────────────────────────────
+        const VIDEO_COUNT = 20;
+
+        // ÉTAPE 1 : Génération des images keyframes (RPM = 20 images/min en 1K)
+        const IMAGE_SIZE = "1K";
+        const IMAGE_RATIO = "9:16";
+        const IMAGE_INTER_CALL_DELAY_MS = 5000;   // 5s entre chaque image (12/min, sous la limite de 20)
+
+        // ÉTAPE 2 : Génération des vidéos (RPM = 1/min pour agnes-video-v2.0)
+        const NUM_FRAMES = 81;              // Réduit de 121 → 81 (≈3.4s au lieu de 5s, ~30% plus rapide)
+        const FRAME_RATE = 24;
+        const PRE_VIDEO_DELAY_MS = 65000;   // 65s avant le 1er appel vidéo
+        const INTER_VIDEO_DELAY_MS = 65000; // 65s entre deux tâches vidéo
+        const FIRST_POLL_DELAY_MS = 60000;  // 60s avant la 1ère vérification (au lieu de 120s)
+        const POLL_INTERVAL_MS = 15000;     // 15s entre chaque vérification (au lieu de 30s)
+        const MAX_POLL_ATTEMPTS = 30;       // ~7.5 min max par vidéo
+
+        // Backoff pour les erreurs 429
+        const RATE_LIMIT_BACKOFF_SEC = [60, 120, 180, 240, 300];
+        const MAX_RATE_LIMIT_RETRIES = 5;
+
+        function getApiKey() {
+            return (localStorage.getItem("agnes_api_key") || "").trim() || DEFAULT_API_KEY;
+        }
+        function saveApiKey() {
+            const v = document.getElementById("api-key-input").value.trim();
+            if (!v) { alert("Clé vide."); return; }
+            localStorage.setItem("agnes_api_key", v);
+            log("Clé API sauvegardée localement.", "ok");
+        }
+        function agnesHeaders() {
+            return { "Authorization": `Bearer ${getApiKey()}`, "Content-Type": "application/json" };
+        }
+
+        // ============================================================
+        // STYLES DE RÉALISATEURS PROFESSIONNELS
+        // ============================================================
+        // Chaque style encode le "cluster technique" (80% du travail)
+        // plutôt que juste un nom (20% du travail).
+        // Référence : les styles à forte densité de règles et géométrie
+        // stable sont les seuls à se reproduire de manière cohérente.
+        const DIRECTOR_STYLES = [
+            {
+                name: "Wes Anderson",
+                cluster: "Perfectly symmetrical composition, planimetric staging, flat frontal framing, pastel color palette (soft pink, mint green, pale yellow), meticulous production design, slow dolly-in or 90-degree whip pan, flat 40mm telephoto lens, centered subject, whimsical precision, stationary camera with slight breathing movement"
+            },
+            {
+                name: "Stanley Kubrick",
+                cluster: "One-point perspective, symmetrical centering, slow zoom, wide-angle interiors, geometric order, formal ritualized blocking, cool observational distance, restrained exact color palette, measured depth and focus, clean but materially credible capture, unsettling calm"
+            },
+            {
+                name: "Denis Villeneuve",
+                cluster: "Monumental scale, monochromatic desaturated palette blocks, atmospheric haze, long lenses, negative-space blocking, brutalist architecture, vast negative space, minimal contrast, golden sand tones with cool blue shadows, epic atmospheric mood, slow deliberate camera movement"
+            },
+            {
+                name: "David Fincher",
+                cluster: "Locked frames, slow precise push-ins, underexposure, cool desaturated palette, deep shadows, controlled symmetry, 85:15 dark-to-light ratio, meticulous camera placement, cold precision, subtle lens distortion, no handheld"
+            },
+            {
+                name: "Hayao Miyazaki",
+                cluster: "Hand-painted watercolor textures, soft midday light, lush green landscapes, cel-shaded characters, warm afternoon light, painterly cumulus sky, gentle breeze through grass, muted earth tones, slow dreamy motion, nostalgic magical realism, weathered rural architecture"
+            },
+            {
+                name: "Wong Kar-wai",
+                cluster: "Split-toned amber and emerald palette, slow shutter motion smear, 2.40:1 hard matte, saturated moody colors, neon reflections on wet surfaces, intimate framing, romantic melancholy, shallow depth of field, step-printed slow motion"
+            },
+            {
+                name: "Roger Deakins",
+                cluster: "Motivated practical lighting, warm shadow fill, subtle lens distortion, naturalistic light sources, precise exposure, elegant wide compositions, muted color palette, deep focus, atmospheric depth, quiet observational beauty"
+            },
+            {
+                name: "Emmanuel Lubezki",
+                cluster: "Long uncut takes, natural available light, wide-angle intimacy, fluid handheld movement, magic hour lighting, deep focus, naturalistic color, immersive perspective, wide-angle 14mm lens, breathing camera"
+            },
+            {
+                name: "Christopher Nolan",
+                cluster: "IMAX scale, epic practical effects, cold blue-grey palette, monumental architecture, deep focus, sweeping crane shots, orchestral visual rhythm, high contrast, large-format clarity, immersive scale"
+            },
+            {
+                name: "David Lynch",
+                cluster: "Dreamlike surreal atmosphere, saturated red and deep blue palette, unsettling stillness, slow creeping camera movement, stark contrast between normalcy and horror, velvet textures, industrial ambient sound design, uncanny framing"
+            },
+            {
+                name: "Akira Kurosawa",
+                cluster: "Dynamic weather elements (wind, rain, dust), telephoto compression, multiple camera angles, strong diagonal compositions, high contrast black and white (or muted color), samurai epic scale, rhythmic editing, nature as character"
+            },
+            {
+                name: "Alfonso Cuarón",
+                cluster: "Immersive long takes, handheld intimacy, natural light, muted desaturated palette, shallow depth of field, fluid camera movement, documentary realism, spatial continuity, 65mm large format"
+            },
+            {
+                name: "Guillermo del Toro",
+                cluster: "Rich amber and teal palette, gothic romanticism, practical creature effects, warm candlelight, intricate production design, fairy-tale darkness, ornate textures, deep saturated color, operational camera movement"
+            },
+            {
+                name: "Jean-Pierre Jeunet",
+                cluster: "Hyper-saturated warm palette (green, gold, red), whimsical Parisian aesthetic, symmetrical compositions, intricate visual detail, accelerated camera movement, playful editing rhythm, magical realism, nostalgic nostalgia"
+            },
+            {
+                name: "Bong Joon-ho",
+                cluster: "Vertical social hierarchy in frame, precise centered compositions, muted earth tones with sudden color accents, tonal shifts between genres, slow reveal camera movement, rain-soaked textures, darkly comic framing"
+            },
+            {
+                name: "Gaspar Noé",
+                cluster: "Extreme long takes, saturated neon palette, disorienting camera movement, strobe lighting, visceral immersion, split-screen, hypnotic rhythm, confrontational framing, sensory overload"
+            },
+            {
+                name: "Tarkovsky",
+                cluster: "Slow contemplative camera drift, muted sepia and green palette, water and fire as recurring elements, long unbroken shots, spiritual atmosphere, decaying textures, poetic composition, meditative pacing"
+            },
+            {
+                name: "Nicolas Winding Refn",
+                cluster: "Neon-soaked magenta and cyan palette, hypnotic slow motion, minimalist dialogue, symmetrical compositions, synthwave aesthetic, brutal elegance, shallow depth of field, meditative violence, electric atmosphere"
+            },
+            {
+                name: "Yorgos Lanthimos",
+                cluster: "Wide-angle fisheye lens, detached observational framing, muted pastel palette, symmetrical compositions, unnerving stillness, natural light, sterile environments, deadpan staging, unsettling precision"
+            },
+            {
+                name: "Lars von Trier",
+                cluster: "Handheld Dogme 95 style, natural available light, desaturated palette, raw emotional intimacy, jump cuts, jump-frame editing, documentary realism, stark performances, austere compositions"
+            }
+        ];
+
+        // ============================================================
+        // INDEXEDDB (Historique)
+        // ============================================================
+        const DB_NAME = "CineIAGammaDB";
+        const DB_VERSION = 1;
+        const STORE = "videos";
+        let db = null;
+
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(DB_NAME, DB_VERSION);
+                req.onerror = () => reject(req.error);
+                req.onsuccess = () => { db = req.result; resolve(db); };
+                req.onupgradeneeded = (e) => {
+                    const d = e.target.result;
+                    if (!d.objectStoreNames.contains(STORE)) {
+                        const s = d.createObjectStore(STORE, { keyPath: "id", autoIncrement: true });
+                        s.createIndex("timestamp", "timestamp", { unique: false });
+                    }
+                };
+            });
+        }
+        function saveVideoToDB(data) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE, "readwrite");
+                const req = tx.objectStore(STORE).add(data);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+        function getAllVideosFromDB() {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE, "readonly");
+                const req = tx.objectStore(STORE).getAll();
+                req.onsuccess = () => resolve(req.result || []);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        // ============================================================
+        // STATE
+        // ============================================================
+        let state = {
+            isRunning: false,
+            imageDataUri: null,
+            videoPrompts: [],
+            keyframeUrls: [],
+            videos: []
+        };
+
+        // ============================================================
+        // UTILS
+        // ============================================================
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+        function log(msg, cls = "") {
+            const el = document.getElementById("log-box");
+            el.classList.add("visible");
+            const d = document.createElement("div");
+            d.className = cls;
+            d.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            el.appendChild(d);
+            el.scrollTop = el.scrollHeight;
+        }
+        function setStatus(text) {
+            document.getElementById("global-status-text").textContent = text;
+        }
+        function showCooldown(sec) {
+            const el = document.getElementById("cooldown-badge");
+            if (sec > 0) { el.textContent = `⏸ pause ${sec}s`; el.style.display = "inline-block"; }
+            else { el.style.display = "none"; }
+        }
+        function showError(msg) {
+            const el = document.getElementById("error-box");
+            if (!el) {
+                const e = document.createElement("div");
+                e.id = "error-box"; e.className = "error-box visible"; e.textContent = msg;
+                document.querySelector(".container").appendChild(e);
+            } else { el.textContent = msg; el.classList.add("visible"); }
+        }
+        function clearError() {
+            const el = document.getElementById("error-box");
+            if (el) { el.textContent = ""; el.classList.remove("visible"); }
+        }
+        function esc(s) {
+            return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+        }
+
+        async function countdown(seconds, label) {
+            for (let s = seconds; s > 0; s--) {
+                if (!state.isRunning) throw new Error("Annulé");
+                setStatus(`${label} (${s}s)`);
+                showCooldown(s);
+                await sleep(1000);
+            }
+            showCooldown(0);
+        }
+
+        // ============================================================
+        // API FETCH WRAPPER (Gestion 429)
+        // ============================================================
+        async function apiFetch(url, options = {}, label = "API") {
+            for (let attempt = 0; attempt <= MAX_RATE_LIMIT_RETRIES; attempt++) {
+                const res = await fetch(url, options);
+                if (res.status !== 429) return res;
+                if (attempt === MAX_RATE_LIMIT_RETRIES) {
+                    log(`${label} : rate limit persistant.`, "err");
+                    return res;
+                }
+                const waitSec = RATE_LIMIT_BACKOFF_SEC[attempt] || 300;
+                log(`⚠️ ${label} : RATE LIMIT 429. Attente ${waitSec}s…`, "warn");
+                try { await countdown(waitSec, `⏸ Rate limit — reprise dans`); }
+                catch (e) { throw new Error("Annulé pendant le cooldown"); }
+            }
+            throw new Error("apiFetch : sortie de boucle inattendue");
+        }
+
+        // ============================================================
+        // CONVERSION DE L'IMAGE EN BASE64 (Data URI)
+        // ============================================================
+        function fileToDataUri(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = () => reject(new Error("Erreur lecture fichier."));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // ============================================================
+        // ÉTAPE 1 : ANALYSE + GÉNÉRATION DES PROMPTS VIDÉO
+        // ============================================================
+        async function generateVideoPrompts(imageDataUri) {
+            log("Analyse de l'image + génération des prompts vidéo…", "hl");
+            setStatus("L'agent analyse l'image et imagine les variantes…");
+
+            // Construire la liste des styles disponibles
+            const styleList = DIRECTOR_STYLES.map((s, i) => `${i + 1}. ${s.name}`).join("\n");
+
+            const systemPrompt = `You are a world-class film director and visual artist. You are given a single reference image (provided as a Data URI). Your mission: create a list of ${VIDEO_COUNT} video prompts that will transform this still image into short animated clips.
+
+RULES:
+- Each prompt must describe an ANIMATION of the scene in the reference image. The subject, characters, and environment MUST be preserved (same identity, same colors, same composition). Only the MOTION, LIGHTING, and ATMOSPHERE change.
+- Each prompt must specify a DIFFERENT director style from the list below.
+- Each prompt must be in English, under 500 characters.
+- Each prompt MUST follow this skeleton: [DIRECTOR STYLE CLUSTER] + [MOTION/ACTION] + [CAMERA MOVEMENT] + [LIGHTING/ATMOSPHERE] + [TAIL: cinematic, 9:16 vertical, 24fps]
+
+AVAILABLE DIRECTOR STYLES (pick different ones for each prompt):
+${styleList}
+
+For each prompt, copy the technical cluster from the director style VERBATIM. This is what maintains the professional look. The cluster is the 80% of the work — the name alone is only 20%.
+
+OUTPUT — a single valid JSON object:
+{
+  "prompts": [
+    { "index": 1, "director_name": "string (the director's name)", "style_cluster": "string (the technical cluster used)", "prompt": "Full English prompt with the cluster embedded..." },
+    ...
+  ]
+}
+
+Return EXACTLY ${VIDEO_COUNT} prompts. No commentary, no markdown fences.`;
+
+            const userMessage = {
+                role: "user",
+                content: [
+                    { type: "text", text: `Analyse cette image de référence et génère ${VIDEO_COUNT} variantes vidéo créatives, chacune avec un style de réalisateur professionnel différent.` },
+                    { type: "image_url", image_url: { url: imageDataUri } }
+                ]
+            };
+
+            const res = await apiFetch(`${AGNES_BASE_URL}/chat/completions`, {
+                method: "POST", headers: agnesHeaders(),
+                body: JSON.stringify({
+                    model: MODELS.text,
+                    messages: [
+                        { role: "system", content: systemPrompt },
+                        userMessage
+                    ],
+                    temperature: 0.9,
+                    max_tokens: 8000
+                })
+            }, "Texte · Analyse image + prompts");
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+
+            let content = data.choices?.[0]?.message?.content || "";
+            content = content.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+            const start = content.indexOf("{"); const end = content.lastIndexOf("}");
+            if (start >= 0 && end > start) content = content.slice(start, end + 1);
+
+            let parsed;
+            try { parsed = JSON.parse(content); }
+            catch (e) { throw new Error("JSON des prompts invalide."); }
+
+            const prompts = Array.isArray(parsed.prompts) ? parsed.prompts : [];
+            if (prompts.length === 0) throw new Error("Aucun prompt généré.");
+
+            log(`${prompts.length} prompts générés avec styles de réalisateurs.`, "ok");
+            return prompts.slice(0, VIDEO_COUNT);
+        }
+
+        // ============================================================
+        // ÉTAPE 2 : GÉNÉRATION D'IMAGES KEYFRAMES
+        // ============================================================
+        async function generateKeyframeImage(prompt, styleCluster) {
+            // On combine le style cluster avec l'instruction de mouvement.
+            // L'image résultante servira de keyframe pour la vidéo.
+            const imagePrompt = `${styleCluster} — ${prompt} — still frame, high detail, professional cinematography, ${IMAGE_RATIO} aspect ratio`;
+
+            const res = await apiFetch(`${AGNES_BASE_URL}/images/generations`, {
+                method: "POST", headers: agnesHeaders(),
+                body: JSON.stringify({
+                    model: MODELS.image,
+                    prompt: imagePrompt,
+                    size: IMAGE_SIZE,
+                    ratio: IMAGE_RATIO,
+                    return_base64: true
+                })
+            }, "Image · Keyframe");
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+
+            // L'API peut retourner l'image en URL ou en base64
+            let imageUrl;
+            if (data.data && data.data[0]) {
+                if (data.data[0].b64_json) {
+                    imageUrl = `data:image/png;base64,${data.data[0].b64_json}`;
+                } else if (data.data[0].url) {
+                    imageUrl = data.data[0].url;
+                }
+            }
+            if (!imageUrl && data.url) imageUrl = data.url;
+            if (!imageUrl && data.images && data.images[0]) imageUrl = data.images[0];
+            if (!imageUrl) throw new Error("Pas d'image retournée.");
+
+            return imageUrl;
+        }
+
+        // ============================================================
+        // ÉTAPE 3 : CRÉATION TÂCHE VIDÉO (keyframe → vidéo)
+        // ============================================================
+        async function createVideoTask(prompt, keyframeUrl) {
+            const body = {
+                model: MODELS.video,
+                prompt: prompt,
+                image: keyframeUrl,
+                num_frames: NUM_FRAMES,
+                frame_rate: FRAME_RATE
+            };
+
+            const res = await apiFetch(`${AGNES_BASE_URL}/videos`, {
+                method: "POST", headers: agnesHeaders(), body: JSON.stringify(body)
+            }, "Vidéo · Création");
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+            const videoId = data.video_id || data.id || data.task_id;
+            if (!videoId) throw new Error("Pas de video_id retourné.");
+            return videoId;
+        }
+
+        // ============================================================
+        // ÉTAPE 4 : POLLING VIDÉO (optimisé : 60s puis 15s)
+        // ============================================================
+        async function pollUntilComplete(videoId, index) {
+            let remaining = Math.floor(FIRST_POLL_DELAY_MS / 1000);
+            while (remaining > 0 && state.isRunning) {
+                setStatus(`Variante ${index + 1} : attente initiale… (${remaining}s)`);
+                showCooldown(remaining);
+                await sleep(1000);
+                remaining--;
+            }
+            if (!state.isRunning) throw new Error("Annulé");
+
+            for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
+                if (!state.isRunning) throw new Error("Annulé");
+                if (attempt > 0) {
+                    let r = Math.floor(POLL_INTERVAL_MS / 1000);
+                    while (r > 0 && state.isRunning) {
+                        setStatus(`Variante ${index + 1} : vérification ${attempt + 1}… (${r}s)`);
+                        showCooldown(r);
+                        await sleep(1000);
+                        r--;
+                    }
+                }
+
+                log(`Variante ${index + 1} : vérification n°${attempt + 1}…`, "hl");
+                const url = `${AGNES_RAW_URL}/agnesapi?video_id=${encodeURIComponent(videoId)}&model_name=${encodeURIComponent(MODELS.video)}`;
+                try {
+                    const r = await apiFetch(url, { method: "GET", headers: agnesHeaders() },
+                        `Vidéo · Poll ${index + 1}`);
+                    const d = await r.json();
+                    const status = d.status || "unknown";
+                    const progress = d.progress ?? 0;
+                    log(`Variante ${index + 1} : statut="${status}", progression=${progress}%`);
+                    setStatus(`Variante ${index + 1} : ${progress}%`);
+
+                    if (status === "completed" || status === "succeeded") {
+                        const videoUrl = d.metadata?.url || d.url || d.output?.url;
+                        if (!videoUrl) throw new Error("Terminé mais pas d'URL.");
+                        log(`Variante ${index + 1} : TERMINÉE !`, "ok");
+                        return videoUrl;
+                    }
+                    if (status === "failed" || status === "error")
+                        throw new Error("La génération a échoué.");
+                } catch (err) {
+                    if (err.message.includes("échoué") || err.message.includes("URL")) throw err;
+                    log(`Variante ${index + 1} : erreur polling, on réessaie…`, "warn");
+                }
+            }
+            throw new Error("Délai maximal dépassé.");
+        }
+
+        // ============================================================
+        // RENDU — GALERIE
+        // ============================================================
+        function addVideoToGallery(index, url, directorName) {
+            const grid = document.getElementById("video-grid");
+            const item = document.createElement("div");
+            item.className = "video-item";
+            item.innerHTML = `
+                <video controls preload="metadata" autoplay muted playsinline>
+                    <source src="${url}" type="video/mp4">
+                </video>
+                <div class="video-caption">
+                    <div class="video-caption-title">Variante ${index + 1}</div>
+                    <div class="video-caption-style">🎬 ${esc(directorName || "")}</div>
+                </div>
+            `;
+            grid.appendChild(item);
+        }
+
+        // ============================================================
+        // RENDU — HISTORIQUE
+        // ============================================================
+        async function loadHistory() {
+            try {
+                const videos = await getAllVideosFromDB();
+                const emptyEl = document.getElementById("history-empty");
+                const gridEl = document.getElementById("history-grid");
+                if (!videos.length) { emptyEl.style.display = "block"; gridEl.innerHTML = ""; return; }
+                emptyEl.style.display = "none";
+                videos.sort((a, b) => b.timestamp - a.timestamp);
+                gridEl.innerHTML = videos.map(v => `
+                    <div class="history-item">
+                        <video controls preload="metadata" muted playsinline>
+                            <source src="${v.url}" type="video/mp4">
+                        </video>
+                        <div class="history-meta">
+                            🎬 ${esc(v.director || "")}<br>
+                            ${new Date(v.timestamp).toLocaleString()}
+                        </div>
+                    </div>
+                `).join("");
+            } catch (e) { console.error("Historique :", e); }
+        }
+
+        // ============================================================
+        // WORKFLOW PRINCIPAL
+        // ============================================================
+        async function startGeneration() {
+            if (state.isRunning || !state.imageDataUri) return;
+
+            const btn = document.getElementById("generate-btn");
+            btn.disabled = true;
+            state.isRunning = true;
+
+            clearError();
+            document.getElementById("log-box").innerHTML = "";
+            document.getElementById("video-grid").innerHTML = "";
+            document.getElementById("status-panel").classList.add("visible");
+
+            try {
+                log("🎬 Démarrage du workflow Gamma", "hl");
+                log(`Pipeline : Analyse image → ${VIDEO_COUNT} keyframes (image) → ${VIDEO_COUNT} vidéos`, "hl");
+                log(`Délais : image ${IMAGE_INTER_CALL_DELAY_MS/1000}s | vidéo ${INTER_VIDEO_DELAY_MS/1000}s | poll ${FIRST_POLL_DELAY_MS/1000}s + ${POLL_INTERVAL_MS/1000}s`, "");
+                log(`num_frames=${NUM_FRAMES} (≈${(NUM_FRAMES/FRAME_RATE).toFixed(1)}s à ${FRAME_RATE}fps)`, "");
+
+                // ══════════ ÉTAPE 1 : Analyse + prompts ══════════
+                const prompts = await generateVideoPrompts(state.imageDataUri);
+                state.videoPrompts = prompts;
+
+                // Log des styles choisis
+                const stylesUsed = prompts.map(p => p.director_name || "Inconnu").join(", ");
+                log(`Styles de réalisateurs : ${stylesUsed}`, "ok");
+
+                // ══════════ ÉTAPE 2 : Génération des keyframes ══════════
+                log("━━━ Génération des images keyframes ━━━", "hl");
+                setStatus("Génération des keyframes…");
+                state.keyframeUrls = [];
+
+                for (let i = 0; i < prompts.length; i++) {
+                    if (!state.isRunning) break;
+                    const p = prompts[i];
+                    log(`Keyframe ${i + 1}/${prompts.length} — ${p.director_name || "Style " + (i + 1)}…`, "hl");
+                    setStatus(`Keyframe ${i + 1}/${prompts.length}…`);
+
+                    try {
+                        const kfUrl = await generateKeyframeImage(p.prompt, p.style_cluster || "");
+                        state.keyframeUrls.push(kfUrl);
+                        log(`Keyframe ${i + 1} : OK`, "ok");
+                    } catch (err) {
+                        log(`Keyframe ${i + 1} : échec — ${err.message}`, "err");
+                        state.keyframeUrls.push(null);
+                    }
+
+                    // Pause entre les images (RPM image = 20/min)
+                    if (i < prompts.length - 1 && state.isRunning) {
+                        log(`Pause de ${IMAGE_INTER_CALL_DELAY_MS/1000}s entre les keyframes…`, "warn");
+                        await countdown(Math.floor(IMAGE_INTER_CALL_DELAY_MS / 1000), "⏸ Pause inter-image");
+                    }
+                }
+
+                const keyframesOk = state.keyframeUrls.filter(u => u !== null).length;
+                log(`Keyframes générées : ${keyframesOk}/${prompts.length}`, "ok");
+
+                // ══════════ ÉTAPE 3 : Pause pré-vidéo ══════════
+                log(`Pause de ${PRE_VIDEO_DELAY_MS/1000}s avant le premier appel vidéo (RPM vidéo = 1/min)…`, "warn");
+                await countdown(Math.floor(PRE_VIDEO_DELAY_MS / 1000), "⏸ Pause pré-vidéo");
+
+                // ══════════ ÉTAPE 4 : Génération des vidéos ══════════
+                log("━━━ Génération des vidéos ━━━", "hl");
+                let successCount = 0;
+
+                for (let i = 0; i < prompts.length; i++) {
+                    if (!state.isRunning) break;
+                    const p = prompts[i];
+                    const kfUrl = state.keyframeUrls[i];
+
+                    if (!kfUrl) {
+                        log(`Variante ${i + 1} : keyframe manquante, on saute.`, "warn");
+                        continue;
+                    }
+
+                    log(`━━━━ Variante ${i + 1}/${prompts.length} — ${p.director_name || "Style " + (i + 1)} ━━━━`, "hl");
+                    setStatus(`Variante ${i + 1}/${prompts.length} : création…`);
+
+                    let videoId;
+                    try {
+                        videoId = await createVideoTask(p.prompt, kfUrl);
+                        log(`Variante ${i + 1} : tâche créée (${String(videoId).slice(0, 30)}…)`, "ok");
+                    } catch (err) {
+                        log(`Variante ${i + 1} : échec création — ${err.message}`, "err");
+                        // Pause avant de continuer
+                        if (i < prompts.length - 1 && state.isRunning) {
+                            await countdown(Math.floor(INTER_VIDEO_DELAY_MS / 1000), "⏸ Pause inter-vidéo");
+                        }
+                        continue;
+                    }
+
+                    try {
+                        const url = await pollUntilComplete(videoId, i);
+                        addVideoToGallery(i, url, p.director_name);
+                        successCount++;
+
+                        try {
+                            await saveVideoToDB({
+                                url, director: p.director_name || "",
+                                prompt: p.prompt, timestamp: Date.now()
+                            });
+                            log(`Variante ${i + 1} : sauvegardée.`, "ok");
+                        } catch (dbErr) { log(`Erreur DB : ${dbErr.message}`, "warn"); }
+                    } catch (err) {
+                        log(`Variante ${i + 1} : ${err.message}`, "err");
+                    }
+
+                    // Pause inter-vidéo (RPM vidéo = 1/min)
+                    if (i < prompts.length - 1 && state.isRunning) {
+                        log(`Pause de ${INTER_VIDEO_DELAY_MS/1000}s avant la vidéo suivante…`, "warn");
+                        await countdown(Math.floor(INTER_VIDEO_DELAY_MS / 1000), "⏸ Pause inter-vidéo");
+                    }
+                }
+
+                // ══════════ BILAN ══════════
+                if (successCount > 0) {
+                    setStatus(`✦ ${successCount}/${prompts.length} variantes générées ✦`);
+                    log(`Workflow terminé — ${successCount}/${prompts.length}.`, "ok");
+                    await loadHistory();
+                } else {
+                    setStatus("Aucune vidéo générée.");
+                    showError("Toutes les générations ont échoué.");
+                }
+
+            } catch (err) {
+                log(`Erreur globale : ${err.message}`, "err");
+                showError(err.message);
+                setStatus("Erreur : " + err.message);
+            } finally {
+                state.isRunning = false;
+                btn.disabled = false;
+                showCooldown(0);
+            }
+        }
+
+        // ============================================================
+        // UPLOAD UI
+        // ============================================================
+        const uploadArea = document.getElementById("upload-area");
+        const fileInput = document.getElementById("file-input");
+        const previewArea = document.getElementById("preview-area");
+        const previewImg = document.getElementById("preview-img");
+
+        uploadArea.addEventListener("click", () => fileInput.click());
+        uploadArea.addEventListener("dragover", (e) => { e.preventDefault(); uploadArea.classList.add("dragover"); });
+        uploadArea.addEventListener("dragleave", () => uploadArea.classList.remove("dragover"));
+        uploadArea.addEventListener("drop", (e) => {
+            e.preventDefault(); uploadArea.classList.remove("dragover");
+            if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener("change", (e) => {
+            if (e.target.files.length) handleFile(e.target.files[0]);
+        });
+
+        async function handleFile(file) {
+            if (!file.type.startsWith("image/")) { alert("Fichier non image."); return; }
+            if (file.size > 10 * 1024 * 1024) { alert("Image trop lourde (max 10 MB)."); return; }
+
+            try {
+                const dataUri = await fileToDataUri(file);
+                state.imageDataUri = dataUri;
+                previewImg.src = dataUri;
+                uploadArea.style.display = "none";
+                previewArea.classList.add("visible");
+                log(`Image convertie en Base64 (${(file.size / 1024).toFixed(0)} Ko).`, "ok");
+            } catch (err) {
+                alert("Erreur : " + err.message);
+            }
+        }
+
+        function resetUpload() {
+            state.imageDataUri = null;
+            fileInput.value = "";
+            previewImg.src = "";
+            uploadArea.style.display = "block";
+            previewArea.classList.remove("visible");
+            document.getElementById("status-panel").classList.remove("visible");
+            document.getElementById("video-grid").innerHTML = "";
+        }
+
+        // ============================================================
+        // INIT
+        // ============================================================
+        (async function init() {
+            const stored = localStorage.getItem("agnes_api_key");
+            if (stored) document.getElementById("api-key-input").value = stored;
+
+            try {
+                await openDB();
+                log("IndexedDB initialisée.", "ok");
+                await loadHistory();
+            } catch (e) {
+                log("Erreur IndexedDB : " + e.message, "err");
+            }
+            console.log("CinéIA Gamma — Prêt");
+        })();
+    </script>
+</body>
+</html>
