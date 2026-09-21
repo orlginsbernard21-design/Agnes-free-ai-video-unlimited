@@ -1,3 +1,6 @@
+télécharger la démo.  https://github.com/LaurentVoanh/Agnes-free-ai-video-unlimited/blob/main/index.html
+
+
 pour créer des vidéos gratuitement avec l'intelligence artificielle de manière illimitée veuillez lire ce tutoriel. tous les logiciels sont dans le répertoire il y a le fichier index.html qui est un exemple qui marche bien et les autres s'appellent deepseek...
 
 mise à jour importante : dans le répertoire le fichier index est un exemple qui marche bien mais certains des fichiers qui s'appellent deepseek ont la clé API qui est écrite directement dans le code source , c'était une clé API de test , ainsi pour que ça marche vous devez modifier dans le code source la clé API.  Pour les autres fichiers deepseek la clé API est configurable directement dans la page et elle fonctionne pour toutes les autres applications. de plus sur iPhone je n'ai pas testé il paraît que le iPhone télécharge le fichier et l'ouvre avec un éditeur de texte soit parce qu'il renomme le fichier en point txt ou soit parce qu'il ne l'ouvre pas avec le navigateur dans l'idéal le navigateur est chrome.
