@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CinéIA — Une image, 20 actions épiques</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+        --bg: #0a0a0a; --panel: #151515; --panel-2: #1a1a1a; --border: #2a2a2a;
+        --accent: #c4b5fd; --accent-dark: #a78bfa; --text: #e0e0e0; --text-dim: #888;
+        --success: #4ade80; --error: #f87171; --warn: #facc15;
+    }
+    body { font-family: system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+        background: var(--bg); color: var(--text); min-height: 100vh; display: flex;
+        flex-direction: column; align-items: center; padding: 2rem 1rem; }
+    .container { max-width: 1300px; width: 100%; }
+    header { text-align: center; margin-bottom: 2rem; }
+    h1 { font-size: 2rem; font-weight: 300; letter-spacing: 0.05em; color: #f0f0f0; }
+    .subtitle { color: var(--text-dim); font-size: 0.9rem; font-style: italic; margin-top: 0.3rem; }
+
+    .settings-toggle { background: transparent; border: 1px solid var(--border);
+        color: var(--text-dim); padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.8rem;
+        cursor: pointer; margin-bottom: 1rem; }
+    .settings-toggle:hover { border-color: var(--accent-dark); color: var(--accent); }
+    .settings-panel { background: var(--panel); border: 1px solid var(--border);
+        border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem; display: none; }
+    .settings-panel.visible { display: block; }
+    .settings-row { display: flex; gap: 0.75rem; align-items: end; }
+    .settings-hint { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.5rem; }
+
+    .form-panel { background: var(--panel); border: 1px solid var(--border);
+        border-radius: 16px; padding: 2rem; margin-bottom: 2rem; }
+    label { display: block; font-size: 0.8rem; color: var(--text-dim); margin-bottom: 0.4rem;
+        text-transform: uppercase; letter-spacing: 0.08em; }
+    input[type="password"] {
+        width: 100%; padding: 0.85rem 1rem; border-radius: 10px; border: 1px solid var(--border);
+        background: #0f0f0f; color: var(--text); font-family: inherit; font-size: 0.95rem;
+        transition: border-color 0.2s; }
+    input:focus { outline: none; border-color: var(--accent-dark); }
+
+    .btn { padding: 1rem 2rem; background: var(--accent-dark); color: #0a0a0a; border: none;
+        border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer;
+        transition: background 0.2s, transform 0.1s; width: 100%; }
+    .btn:hover:not(:disabled) { background: var(--accent); }
+    .btn:active:not(:disabled) { transform: scale(0.98); }
+    .btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+    .btn-secondary { background: #2a2a2a; color: var(--text); }
+    .btn-secondary:hover:not(:disabled) { background: #3a3a3a; }
+    .btn-small { padding: 0.6rem 1.2rem; font-size: 0.85rem; }
+
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+        padding: 1.5rem; margin-bottom: 1.5rem; display: none; }
+    .panel.visible { display: block; }
+    .panel-title { font-size: 0.8rem; color: var(--accent-dark); text-transform: uppercase;
+        letter-spacing: 0.1em; margin-bottom: 1rem; font-weight: 600; }
+
+    .status-line { font-size: 0.9rem; color: var(--accent-dark); margin-bottom: 1rem;
+        display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+    .status-line .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-dark);
+        animation: pulse 1.5s infinite; flex-shrink: 0; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+    .cooldown-badge { background: #3a2a15; color: var(--warn); padding: 0.2rem 0.6rem;
+        border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+    .cooldown-badge.ok { background: #153a20; color: var(--success); }
+
+    .clips-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 0.75rem; }
+    .clip-card { background: #1a1a1a; border: 1px solid var(--border); border-radius: 12px;
+        padding: 1rem; text-align: center; transition: border-color 0.3s, opacity 0.3s; }
+    .clip-card.pending { opacity: 0.45; }
+    .clip-card.processing { border-color: var(--accent-dark); }
+    .clip-card.done { border-color: var(--success); }
+    .clip-card.failed { border-color: var(--error); }
+    .clip-number { font-size: 0.7rem; color: #666; text-transform: uppercase;
+        letter-spacing: 0.1em; }
+    .clip-action-name { font-size: 0.65rem; color: var(--accent); margin-bottom: 0.4rem;
+        font-weight: 600; min-height: 2.5em; line-height: 1.2; overflow: hidden; }
+    .clip-icon { font-size: 1.4rem; margin-bottom: 0.3rem; }
+    .clip-timer { font-size: 1rem; font-weight: 600; color: var(--text);
+        font-variant-numeric: tabular-nums; }
+    .clip-status-text { font-size: 0.68rem; color: var(--text-dim); margin-top: 0.2rem; }
+    .clip-card.done .clip-timer { color: var(--success); }
+    .clip-card.failed .clip-timer { color: var(--error); }
+
+    .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 1rem; margin-top: 1rem; }
+    .video-item { background: var(--panel-2); border-radius: 12px; overflow: hidden;
+        border: 1px solid var(--border); animation: fadeIn 0.6s ease-in; }
+    @keyframes fadeIn { from{opacity:0; transform:translateY(10px);}
+        to{opacity:1; transform:translateY(0);} }
+    .video-item video { width: 100%; display: block; aspect-ratio: 9/16; object-fit: cover;
+        background: #000; }
+    .video-caption { padding: 0.7rem 0.8rem; background: var(--panel); }
+    .video-caption-title { font-size: 0.78rem; color: var(--accent); font-weight: 600;
+        margin-bottom: 0.3rem; }
+
+    .log-box { margin-top: 1rem; padding: 0.75rem; background: #0f0f0f; border-radius: 10px;
+        border: 1px solid #222; font-family: ui-monospace, monospace; font-size: 0.7rem;
+        color: #666; max-height: 220px; overflow-y: auto; display: none; }
+    .log-box.visible { display: block; }
+    .log-box div { padding: 1px 0; }
+    .log-box .hl { color: var(--accent); }
+    .log-box .ok { color: var(--success); }
+    .log-box .err { color: var(--error); }
+    .log-box .warn { color: var(--warn); }
+
+    .error-box { background: #2a1515; border: 1px solid var(--error); border-radius: 10px;
+        padding: 1rem; color: var(--error); font-size: 0.85rem; margin-top: 1rem; display: none; }
+    .error-box.visible { display: block; }
+
+    .history-section { margin-top: 3rem; border-top: 1px solid var(--border); padding-top: 2rem; }
+    .history-title { font-size: 1.1rem; font-weight: 300; color: var(--accent-dark);
+        margin-bottom: 1rem; }
+    .history-empty { color: var(--text-dim); font-size: 0.85rem; font-style: italic; }
+    .history-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 0.75rem; margin-top: 1rem; }
+    .history-item { background: var(--panel); border: 1px solid var(--border);
+        border-radius: 10px; overflow: hidden; }
+    .history-item video { width: 100%; display: block; aspect-ratio: 9/16; object-fit: cover; }
+    .history-meta { padding: 0.5rem; font-size: 0.7rem; color: var(--text-dim); line-height: 1.4; }
+
+    .upload-area { display: block; background: var(--panel); border: 2px dashed var(--border);
+        border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; text-align: center;
+        cursor: pointer; transition: border-color 0.2s; }
+    .upload-area:hover, .upload-area.dragover { border-color: var(--accent-dark); }
+    .upload-area input[type="file"] { display: none; }
+    .upload-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+    .upload-text { font-size: 0.9rem; color: var(--text); margin-bottom: 0.3rem; }
+    .upload-hint { font-size: 0.7rem; color: var(--text-dim); }
+    .preview-thumb { max-width: 100%; max-height: 150px; border-radius: 8px; margin-top: 0.6rem; display: none; }
+    .preview-thumb.visible { display: block; margin: 0.6rem auto 0; }
+
+    .upload-status { font-size: 0.8rem; color: var(--accent-dark); margin-top: 0.5rem; min-height: 1.2em; }
+    .upload-status.ok { color: var(--success); }
+    .upload-status.err { color: var(--error); }
+
+    .analysis-panel { background: var(--panel-2); border: 1px solid var(--border);
+        border-radius: 12px; padding: 1rem; margin: 1rem 0; display: none; }
+    .analysis-panel.visible { display: block; }
+    .analysis-item { font-size: 0.8rem; margin-bottom: 0.5rem; }
+    .analysis-label { color: var(--accent); font-weight: 600; }
+    .analysis-value { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>CinéIA · 20 Actions Épiques</h1>
+        <p class="subtitle">Style conservé · IA analyse l'image · 20 vidéos blockbuster</p>
+    </header>
+
+    <button class="settings-toggle" onclick="document.getElementById('settings-panel').classList.toggle('visible')">
+        ⚙️ Paramètres API
+    </button>
+    <div id="settings-panel" class="settings-panel">
+        <div class="settings-row">
+            <div style="flex:1;">
+                <label for="api-key-input">Clé API Agnes AI</label>
+                <input type="password" id="api-key-input" placeholder="sk-...">
+            </div>
+            <button class="btn" style="width:auto; padding:0.85rem 1.5rem;" onclick="saveApiKey()">Sauvegarder</button>
+        </div>
+        <p class="settings-hint">Stockée localement. Jamais envoyée ailleurs qu'à l'API Agnes AI.</p>
+    </div>
+
+    <div class="form-panel">
+        <div class="panel-title">🖼️ Image de référence</div>
+
+        <label class="upload-area" id="upload-area" for="file-input">
+            <input type="file" id="file-input" accept="image/png,image/jpeg,image/webp,image/jpg">
+            <div class="upload-icon">🖼️</div>
+            <div class="upload-text">Cliquez ou glissez une photo ici</div>
+            <div class="upload-hint">PNG, JPG, WEBP — max 10 MB. L'IA analysera le style et créera 20 actions.</div>
+            <img id="preview-thumb" class="preview-thumb" alt="Aperçu">
+        </label>
+        <div id="upload-status" class="upload-status"></div>
+        <button class="btn btn-secondary btn-small" onclick="clearImage()" style="width:auto; margin-bottom:1rem;">Retirer l'image</button>
+
+        <div id="analysis-panel" class="analysis-panel">
+            <div class="panel-title">🔍 Analyse de l'image par l'IA</div>
+            <div id="analysis-content"></div>
+        </div>
+
+        <button id="start-btn" class="btn" onclick="startGeneration()" disabled>
+            🎬 Analyser l'image et générer 20 vidéos épiques
+        </button>
+        <div id="error-box" class="error-box"></div>
+    </div>
+
+    <div id="progress-panel" class="panel">
+        <div class="status-line">
+            <span class="dot"></span>
+            <span id="global-status-text">Initialisation…</span>
+            <span id="cooldown-badge" class="cooldown-badge" style="display:none;"></span>
+        </div>
+        <div id="clips-grid" class="clips-grid"></div>
+    </div>
+
+    <div id="gallery-panel" class="panel">
+        <div class="panel-title" id="gallery-title">✦ Vos vidéos apparaîtront ici ✦</div>
+        <div id="video-grid" class="video-grid"></div>
+    </div>
+
+    <div id="log-box" class="log-box"></div>
+
+    <div class="history-section">
+        <div class="history-title">📚 Historique de vos créations</div>
+        <div id="history-container">
+            <div class="history-empty" id="history-empty">Aucune vidéo enregistrée pour le moment.</div>
+            <div class="history-grid" id="history-grid"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ==================================================================
+// CONFIGURATION
+// ==================================================================
+const DEFAULT_API_KEY = "sk-dM9EbSl8fw8D1jz4eSGGdu85dfnQirgqya8AG41AIYFf24uK";
+const BASE_URL = "https://apihub.agnes-ai.com/v1";
+const RAW_URL  = "https://apihub.agnes-ai.com";
+
+const MODELS = { text: "agnes-2.0-flash", video: "agnes-video-v2.0" };
+
+// ── Durées ────────────────────────────────────────────────────────
+const FILM_NUM_FRAMES = 153;   // 8×19+1 = 153 frames → 6,375 s à 24 fps
+const FRAME_RATE = 24;
+const TOTAL_VIDEOS = 20;
+
+// ── Timing intelligent ────────────────────────────────────────────
+// La fenêtre RPM (1 req/min) démarre au POST de création, pas à la
+// fin de génération. Comme la génération prend ~100-120 s, le RPM
+// est TOUJOURS respecté sans aucune pause supplémentaire.
+// On vérifie juste le temps écoulé depuis le dernier POST.
+const MIN_INTER_POST_MS = 62000;   // marge de sécurité : 62 s
+
+// ── Polling optimisé ──────────────────────────────────────────────
+// La génération prend ~100-120 s. Inutile de spammer : on attend 40 s
+// avant le premier check, puis on poll toutes les 8 s.
+const FIRST_POLL_DELAY_MS = 40000;
+const POLL_INTERVAL_MS = 8000;
+const MAX_POLL_ATTEMPTS = 60;      // 60 × 8 s = 480 s max
+
+// ── Backoff 429 ───────────────────────────────────────────────────
+const RATE_LIMIT_BACKOFF_SEC = [5, 8, 12, 16, 20, 25, 30, 40];
+const MAX_RATE_LIMIT_RETRIES = 8;
+
+// ==================================================================
+// STATE
+// ==================================================================
+let state = {
+    isRunning: false,
+    referenceImageDataUri: null,
+    analysis: null,
+    clips: [],
+    generationTimes: [],
+    lastCreationPostTime: 0    // timestamp du dernier POST vidéo
+};
+
+// ==================================================================
+// UTILS
+// ==================================================================
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function log(msg, cls = "") {
+    const el = document.getElementById("log-box");
+    el.classList.add("visible");
+    const d = document.createElement("div");
+    d.className = cls;
+    d.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    el.appendChild(d);
+    el.scrollTop = el.scrollHeight;
+}
+
+function setStatus(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+}
+
+function setUploadStatus(text, cls = "") {
+    const el = document.getElementById("upload-status");
+    el.textContent = text;
+    el.className = "upload-status" + (cls ? " " + cls : "");
+}
+
+function showCooldown(badgeId, sec, isOk = false) {
+    const el = document.getElementById(badgeId);
+    if (!el) return;
+    if (sec > 0) {
+        el.textContent = `⏸ ${sec}s`;
+        el.style.display = "inline-block";
+        el.className = "cooldown-badge" + (isOk ? " ok" : "");
+    } else {
+        el.style.display = "none";
+    }
+}
+
+function showError(msg) {
+    const el = document.getElementById("error-box");
+    el.textContent = msg; el.classList.add("visible");
+}
+
+function clearError() {
+    const el = document.getElementById("error-box");
+    el.textContent = ""; el.classList.remove("visible");
+}
+
+function esc(s) {
+    return String(s ?? "").replace(/[&<>"']/g, c => (
+        {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]
+    ));
+}
+
+function getApiKey() {
+    return (localStorage.getItem("agnes_api_key") || "").trim() || DEFAULT_API_KEY;
+}
+
+function apiHeaders() {
+    return { "Authorization": `Bearer ${getApiKey()}`, "Content-Type": "application/json" };
+}
+
+function saveApiKey() {
+    const v = document.getElementById("api-key-input").value.trim();
+    if (!v) { alert("Clé vide."); return; }
+    localStorage.setItem("agnes_api_key", v);
+    log("Clé API sauvegardée localement.", "ok");
+}
+
+function fileToDataUri(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = () => reject(new Error("Erreur lecture fichier."));
+        reader.readAsDataURL(file);
+    });
+}
+
+// ==================================================================
+// API FETCH AVEC BACKOFF 429 RENFORCÉ
+// ==================================================================
+async function apiFetch(url, options = {}, label = "API") {
+    for (let attempt = 0; attempt <= MAX_RATE_LIMIT_RETRIES; attempt++) {
+        const res = await fetch(url, options);
+        if (res.status !== 429) return res;
+        if (attempt === MAX_RATE_LIMIT_RETRIES) {
+            log(`${label} : rate limit persistant.`, "err");
+            return res;
+        }
+        const waitSec = RATE_LIMIT_BACKOFF_SEC[attempt] || 40;
+        log(`⚠️ ${label} : RATE LIMIT 429. Attente ${waitSec}s… (tentative ${attempt + 1}/${MAX_RATE_LIMIT_RETRIES + 1})`, "warn");
+        for (let s = waitSec; s > 0; s--) {
+            if (!state.isRunning) throw new Error("Annulé");
+            setStatus("global-status-text", `⏸ Rate limit — reprise dans ${s}s`);
+            showCooldown("cooldown-badge", s);
+            await sleep(1000);
+        }
+        showCooldown("cooldown-badge", 0);
+    }
+    throw new Error("apiFetch : sortie de boucle inattendue");
+}
+
+// ==================================================================
+// ATTENTE INTELLIGENTE : seulement si nécessaire
+// ==================================================================
+async function waitForRateLimitIfNeeded() {
+    const now = Date.now();
+    const elapsed = now - state.lastCreationPostTime;
+    if (elapsed >= MIN_INTER_POST_MS) {
+        log(`✅ RPM OK : ${(elapsed / 1000).toFixed(1)}s écoulées depuis le dernier POST — aucune pause nécessaire.`, "ok");
+        return;
+    }
+    const waitSec = Math.ceil((MIN_INTER_POST_MS - elapsed) / 1000);
+    log(`⏸ Attente RPM : ${waitSec}s nécessaires avant le prochain POST.`, "warn");
+    for (let s = waitSec; s > 0 && state.isRunning; s--) {
+        setStatus("global-status-text", `⏸ Attente RPM (${s}s)…`);
+        showCooldown("cooldown-badge", s);
+        await sleep(1000);
+    }
+    showCooldown("cooldown-badge", 0);
+}
+
+// ==================================================================
+// ANALYSE DE L'IMAGE AVEC PROMPT "BLOCKBUSTER"
+// ==================================================================
+async function analyzeImage(dataUri) {
+    log("🔍 Analyse de l'image par l'IA (agnes-2.0-flash)…", "hl");
+
+    const systemPrompt = `You are a Hollywood blockbuster action director and visual analyst. Analyze the provided image and return ONLY a valid JSON object with the following structure. No commentary, no markdown fences.
+
+{
+  "visual_style": "Concise English description (max 50 words) of the EXACT visual style: art direction, rendering technique, color palette, lighting, camera quality. This will be reused VERBATIM to preserve the style.",
+  "world_context": "Concise English description (max 40 words) of the setting, environment, time period, atmosphere.",
+  "character_description": "Detailed English description (max 60 words) of the main subject: species, appearance, clothing, distinctive features. If no clear character, describe the central visual element.",
+  "actions": [
+    "Exactly 20 spectacular actions in English."
+  ]
+}
+
+═══════════════════════════════════════════════
+CRITICAL RULES FOR THE 20 ACTIONS
+═══════════════════════════════════════════════
+
+Each action must be a MIND-BLOWING, BLOCKBUSTER-LEVEL, HOOK-WORTHY moment worthy of a viral short film. They must be VISCERAL, CINEMATIC, and IMPOSSIBLE-TO-IGNORE.
+
+FORBIDDEN (do NOT write actions like these):
+- Talking, speeches, shouting, rallying crowds
+- Holding objects, waving, tearing papers, walking
+- Any calm, realistic, mundane, or political action
+- Any action that could happen in real life without VFX
+
+REQUIRED ELEMENTS — every action MUST include at least 2 of these:
+- Superhuman powers (flight, telekinesis, energy blasts, time manipulation)
+- Reality-bending transformations (body morphing, size change, elemental form)
+- Colossal scale (giant creatures, city-sized phenomena, cosmic events)
+- Epic destruction (explosions, collapsing buildings, shattered ground)
+- Mythical/magical elements (dragons, portals, glowing runes, summoned weapons of light)
+- Environment warping (sky tearing open, gravity inverting, oceans rising)
+- Emotional intensity at maximum (sacrifice, rebirth, unleashing inner power)
+
+VARIETY — distribute the 20 actions across these categories:
+- 4× Raw combat / martial arts / weapon mastery (with VFX enhancement)
+- 3× Superpower awakening / energy release / transformation
+- 3× Epic scale reveal (giant creature, cosmic event, monumental structure)
+- 3× Reality manipulation (time freeze, portal, dimension shift)
+- 3× Elemental mastery (fire, ice, lightning, storm, water)
+- 2× Flight / aerial spectacle / levitation with dramatic setting
+- 2× Emotional climax (sacrifice, rebirth, unleashing hidden power)
+
+STYLE: Each action = ONE vivid cinematic sentence (15-25 words), present tense, third person. Include specific visual details (colors, effects, camera-worthy moments). NO vague descriptions.
+
+EXAMPLE OF GOOD ACTIONS (do NOT copy, just match this energy):
+- "The character erupts into a swirling column of golden fire, gravity bending around them as debris orbits like a planetary ring."
+- "A colossal spectral dragon made of pure lightning coils around the character, its roar shattering every window in a three-mile radius."
+- "Time freezes mid-explosion, the character walks calmly through suspended fireballs, each step cracking reality like glass."
+- "The character slams both fists into the ground, and the entire city block launches into the air, buildings floating like islands."
+- "Massive chains of glowing energy erupt from the ground and bind the character, who breaks free in a blinding flash of white light."
+
+Return EXACTLY 20 actions. No filler. No explanations. Maximum impact.`;
+
+    const body = {
+        model: MODELS.text,
+        messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: [
+                { type: "text", text: "Analyze this image and return the JSON with 20 mind-blowing actions." },
+                { type: "image_url", image_url: { url: dataUri } }
+            ]}
+        ],
+        temperature: 1.0,
+        max_tokens: 4000
+    };
+
+    const res = await apiFetch(`${BASE_URL}/chat/completions`, {
+        method: "POST", headers: apiHeaders(), body: JSON.stringify(body)
+    }, "Analyse · Texte");
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+
+    let content = data.choices?.[0]?.message?.content || "";
+    content = content.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+
+    const start = content.indexOf("{");
+    const end = content.lastIndexOf("}");
+    if (start >= 0 && end > start) content = content.slice(start, end + 1);
+
+    let parsed;
+    try {
+        parsed = JSON.parse(content);
+    } catch (e) {
+        throw new Error("JSON d'analyse invalide : " + content.slice(0, 200));
+    }
+
+    if (!parsed.visual_style || !parsed.actions || !Array.isArray(parsed.actions)) {
+        throw new Error("Structure d'analyse invalide.");
+    }
+
+    while (parsed.actions.length < TOTAL_VIDEOS) {
+        parsed.actions.push("The character unleashes a devastating burst of energy that cracks the sky open, reality warping around them in blinding light.");
+    }
+    parsed.actions = parsed.actions.slice(0, TOTAL_VIDEOS);
+
+    log(`✅ Analyse terminée. Style : "${parsed.visual_style.slice(0, 80)}…"`, "ok");
+    log(`✅ ${parsed.actions.length} actions épiques générées.`, "ok");
+
+    return parsed;
+}
+
+// ==================================================================
+// POLLING OPTIMISÉ (40 s d'attente initiale, puis 8 s)
+// ==================================================================
+async function pollVideo(videoId, label) {
+    const startTime = Date.now();
+
+    // Premier délai : 40 s (la vidéo prend ~100 s, inutile de spammer avant)
+    log(`${label} : premier check dans ${FIRST_POLL_DELAY_MS / 1000}s…`, "hl");
+    for (let s = Math.floor(FIRST_POLL_DELAY_MS / 1000); s > 0 && state.isRunning; s--) {
+        setStatus("global-status-text", `${label} : premier check dans ${s}s…`);
+        showCooldown("cooldown-badge", s);
+        await sleep(1000);
+    }
+    showCooldown("cooldown-badge", 0);
+    if (!state.isRunning) throw new Error("Annulé");
+
+    for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
+        if (!state.isRunning) throw new Error("Annulé");
+
+        if (attempt > 0) {
+            for (let r = Math.floor(POLL_INTERVAL_MS / 1000); r > 0 && state.isRunning; r--) {
+                setStatus("global-status-text", `${label} : prochain check dans ${r}s…`);
+                showCooldown("cooldown-badge", r);
+                await sleep(1000);
+            }
+            showCooldown("cooldown-badge", 0);
+        }
+
+        log(`${label} : vérification n°${attempt + 1}…`, "hl");
+        const url = `${RAW_URL}/agnesapi?video_id=${encodeURIComponent(videoId)}&model_name=${encodeURIComponent(MODELS.video)}`;
+        try {
+            const r = await apiFetch(url, { method: "GET", headers: apiHeaders() }, `${label} · Poll`);
+            const d = await r.json();
+            const status = d.status || "unknown";
+            const progress = d.progress ?? 0;
+            log(`${label} : statut="${status}", progression=${progress}%`);
+            setStatus("global-status-text", `${label} : ${progress}%`);
+
+            if (status === "completed" || status === "succeeded") {
+                const videoUrl = d.metadata?.url || d.url || d.output?.url;
+                if (!videoUrl) throw new Error("Terminé mais pas d'URL.");
+                const elapsed = Date.now() - startTime;
+                log(`${label} : TERMINÉ en ${(elapsed / 1000).toFixed(1)}s !`, "ok");
+                return { url: videoUrl, generationTimeMs: elapsed };
+            }
+            if (status === "failed" || status === "error")
+                throw new Error("La génération a échoué.");
+        } catch (err) {
+            if (err.message.includes("échoué") || err.message.includes("URL")) throw err;
+            log(`${label} : erreur polling (${err.message}), on réessaie…`, "warn");
+        }
+    }
+    throw new Error("Délai maximal dépassé.");
+}
+
+// ==================================================================
+// LANCEMENT DE LA GÉNÉRATION
+// ==================================================================
+async function startGeneration() {
+    if (state.isRunning) return;
+
+    if (!state.referenceImageDataUri) {
+        showError("Veuillez d'abord ajouter une image de référence.");
+        return;
+    }
+
+    const btn = document.getElementById("start-btn");
+    btn.disabled = true;
+    state.isRunning = true;
+    state.generationTimes = [];
+    state.lastCreationPostTime = 0;
+
+    clearError();
+    document.getElementById("log-box").innerHTML = "";
+    document.getElementById("clips-grid").innerHTML = "";
+    document.getElementById("video-grid").innerHTML = "";
+    document.getElementById("gallery-title").textContent = "✦ Vos vidéos apparaîtront ici ✦";
+    document.getElementById("progress-panel").classList.add("visible");
+    document.getElementById("gallery-panel").classList.add("visible");
+    document.getElementById("analysis-panel").classList.remove("visible");
+
+    try {
+        // ── 1. ANALYSE ────────────────────────────────────────────
+        setStatus("global-status-text", "🔍 Analyse de l'image…");
+        const analysis = await analyzeImage(state.referenceImageDataUri);
+        state.analysis = analysis;
+        renderAnalysis(analysis);
+
+        state.clips = analysis.actions.map((action, i) => ({
+            id: i + 1,
+            action: action,
+            status: "pending",
+            statusText: "File d'attente",
+            videoUrl: null,
+            videoId: null,
+            generationTimeMs: null
+        }));
+        renderClips();
+
+        log(`🎬 Génération de ${TOTAL_VIDEOS} vidéos épiques`, "hl");
+        log(`⏱ Timing intelligent : attente RPM uniquement si nécessaire (POST → POST ≥ 62 s).`, "");
+        log(`⏱ Polling : premier check à 40 s, puis toutes les 8 s.`, "");
+
+        let successCount = 0;
+
+        // ── 2. BOUCLE DE GÉNÉRATION ───────────────────────────────
+        for (let i = 0; i < analysis.actions.length; i++) {
+            if (!state.isRunning) break;
+
+            const action = analysis.actions[i];
+
+            // Attente RPM si nécessaire (souvent 0 s)
+            if (i > 0) await waitForRateLimitIfNeeded();
+
+            log(`━━━━ Clip ${i + 1}/${TOTAL_VIDEOS} ━━━━`, "hl");
+            log(`Action : ${action}`, "");
+            setStatus("global-status-text", `Clip ${i + 1}/${TOTAL_VIDEOS} : création…`);
+
+            const prompt = `${analysis.visual_style}. ${analysis.world_context}. Character: ${analysis.character_description}. EPIC ACTION: ${action}. The video MUST seamlessly animate the provided reference image, preserving its EXACT visual style, subject, composition, colors and identity. Do NOT change the art style. Maximum cinematic intensity, blockbuster VFX, dramatic lighting, high-motion, 9:16 vertical, 24fps.`;
+
+            let videoId;
+
+            try {
+                updateClip(i, { status: "processing", statusText: "Création tâche…" });
+
+                const body = {
+                    model: MODELS.video,
+                    prompt: prompt,
+                    image: state.referenceImageDataUri,
+                    num_frames: FILM_NUM_FRAMES,
+                    frame_rate: FRAME_RATE
+                };
+
+                // Enregistrer le timestamp AVANT le POST
+                state.lastCreationPostTime = Date.now();
+
+                const res = await apiFetch(`${BASE_URL}/videos`, {
+                    method: "POST", headers: apiHeaders(), body: JSON.stringify(body)
+                }, `Clip ${i + 1} · Création`);
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+                videoId = data.video_id || data.id || data.task_id;
+                if (!videoId) throw new Error("Pas de video_id retourné.");
+
+                log(`Clip ${i + 1} : tâche créée (${String(videoId).slice(0, 30)}…)`, "ok");
+                updateClip(i, { videoId, statusText: "Attente" });
+
+            } catch (err) {
+                log(`Clip ${i + 1} : échec création — ${err.message}`, "err");
+                updateClip(i, { status: "failed", statusText: "Échec création" });
+                continue;
+            }
+
+            try {
+                const result = await pollVideo(videoId, `Clip ${i + 1}`);
+                const elapsed = result.generationTimeMs;
+                state.generationTimes.push(elapsed);
+
+                updateClip(i, {
+                    status: "done",
+                    videoUrl: result.url,
+                    statusText: "Terminé",
+                    generationTimeMs: elapsed
+                });
+                addVideoToGallery(i, result.url, action, elapsed);
+                successCount++;
+
+                try {
+                    await saveVideoToDB({
+                        url: result.url,
+                        action: action,
+                        visualStyle: analysis.visual_style,
+                        generationTimeMs: elapsed,
+                        timestamp: Date.now()
+                    });
+                } catch (dbErr) { log(`Clip ${i + 1} : erreur DB — ${dbErr.message}`, "warn"); }
+            } catch (err) {
+                log(`Clip ${i + 1} : ${err.message}`, "err");
+                updateClip(i, { status: "failed", statusText: "Échec génération" });
+            }
+        }
+
+        if (successCount > 0) {
+            setStatus("global-status-text", `✦ ${successCount}/${TOTAL_VIDEOS} vidéos générées ✦`);
+            const avg = state.generationTimes.length
+                ? state.generationTimes.reduce((a, b) => a + b, 0) / state.generationTimes.length
+                : 0;
+            log(`Workflow terminé — ${successCount}/${TOTAL_VIDEOS}. Temps moyen : ${(avg / 1000).toFixed(1)}s`, "ok");
+            await loadHistory();
+        } else {
+            setStatus("global-status-text", "Aucune vidéo générée.");
+            showError("Toutes les générations ont échoué.");
+        }
+
+    } catch (err) {
+        log(`Erreur : ${err.message}`, "err");
+        showError(err.message);
+        setStatus("global-status-text", "Erreur : " + err.message);
+    } finally {
+        state.isRunning = false;
+        btn.disabled = false;
+        showCooldown("cooldown-badge", 0);
+    }
+}
+
+// ==================================================================
+// RENDUS
+// ==================================================================
+function renderAnalysis(analysis) {
+    const el = document.getElementById("analysis-content");
+    el.innerHTML = `
+        <div class="analysis-item">
+            <span class="analysis-label">Style visuel :</span>
+            <span class="analysis-value">${esc(analysis.visual_style)}</span>
+        </div>
+        <div class="analysis-item">
+            <span class="analysis-label">Contexte :</span>
+            <span class="analysis-value">${esc(analysis.world_context)}</span>
+        </div>
+        <div class="analysis-item">
+            <span class="analysis-label">Personnage :</span>
+            <span class="analysis-value">${esc(analysis.character_description)}</span>
+        </div>
+        <div class="analysis-item">
+            <span class="analysis-label">Actions (${analysis.actions.length}) :</span>
+            <ol style="margin-left:1.2rem; margin-top:0.3rem; font-size:0.78rem; color:var(--text);">
+                ${analysis.actions.map(a => `<li>${esc(a)}</li>`).join("")}
+            </ol>
+        </div>
+    `;
+    document.getElementById("analysis-panel").classList.add("visible");
+}
+
+function renderClips() {
+    const grid = document.getElementById("clips-grid");
+    grid.innerHTML = state.clips.map((c, i) => {
+        let icon = "◌", timer = "--", statusText = "En attente";
+        if (c.status === "pending") { icon = "◌"; timer = "Prêt"; statusText = "File d'attente"; }
+        else if (c.status === "processing") { icon = "◐"; timer = "…"; statusText = c.statusText || "Génération…"; }
+        else if (c.status === "done") {
+            icon = "●";
+            timer = c.generationTimeMs ? `${(c.generationTimeMs / 1000).toFixed(0)}s` : "✓";
+            statusText = "Terminé";
+        }
+        else if (c.status === "failed") { icon = "✕"; timer = "—"; statusText = "Échec"; }
+        return `
+            <div class="clip-card ${c.status}">
+                <div class="clip-number">Clip ${i + 1}</div>
+                <div class="clip-action-name">${esc(c.action ? c.action.slice(0, 40) + (c.action.length > 40 ? "…" : "") : "")}</div>
+                <div class="clip-icon">${icon}</div>
+                <div class="clip-timer">${timer}</div>
+                <div class="clip-status-text">${statusText}</div>
+            </div>
+        `;
+    }).join("");
+}
+
+function updateClip(index, updates) {
+    Object.assign(state.clips[index], updates);
+    renderClips();
+}
+
+function addVideoToGallery(index, url, action, generationTimeMs) {
+    const grid = document.getElementById("video-grid");
+    const item = document.createElement("div");
+    item.className = "video-item";
+    item.innerHTML = `
+        <video controls preload="metadata" muted playsinline>
+            <source src="${url}" type="video/mp4">
+        </video>
+        <div class="video-caption">
+            <div class="video-caption-title">Clip ${index + 1}</div>
+            <div style="font-size:0.72rem; color:var(--text); line-height:1.3;">${esc(action.slice(0, 120))}${action.length > 120 ? "…" : ""}</div>
+            <div style="font-size:0.68rem; color:var(--text-dim); margin-top:0.3rem;">⏱ Généré en ${(generationTimeMs / 1000).toFixed(1)}s</div>
+        </div>
+    `;
+    grid.appendChild(item);
+    const n = grid.children.length;
+    document.getElementById("gallery-title").textContent = `✦ ${n} vidéo${n > 1 ? "s" : ""} prête${n > 1 ? "s" : ""} ✦`;
+}
+
+// ==================================================================
+// INDEXEDDB
+// ==================================================================
+const DB_NAME = "CineIADB_v9";
+const DB_VERSION = 1;
+const STORE = "videos";
+let db = null;
+
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => { db = req.result; resolve(db); };
+        req.onupgradeneeded = (e) => {
+            const d = e.target.result;
+            if (!d.objectStoreNames.contains(STORE)) {
+                const s = d.createObjectStore(STORE, { keyPath: "id", autoIncrement: true });
+                s.createIndex("timestamp", "timestamp", { unique: false });
+            }
+        };
+    });
+}
+
+function saveVideoToDB(data) {
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, "readwrite");
+        const req = tx.objectStore(STORE).add(data);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+function getAllVideosFromDB() {
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, "readonly");
+        const req = tx.objectStore(STORE).getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+async function loadHistory() {
+    try {
+        const videos = await getAllVideosFromDB();
+        const emptyEl = document.getElementById("history-empty");
+        const gridEl = document.getElementById("history-grid");
+        if (!videos.length) { emptyEl.style.display = "block"; gridEl.innerHTML = ""; return; }
+        emptyEl.style.display = "none";
+        videos.sort((a, b) => b.timestamp - a.timestamp);
+        gridEl.innerHTML = videos.map(v => `
+            <div class="history-item">
+                <video controls preload="metadata" muted playsinline>
+                    <source src="${v.url}" type="video/mp4">
+                </video>
+                <div class="history-meta">
+                    ${esc((v.action || "").slice(0, 60))}…<br>
+                    <span style="color:var(--text-dim);">${(v.generationTimeMs / 1000).toFixed(0)}s · ${new Date(v.timestamp).toLocaleString()}</span>
+                </div>
+            </div>
+        `).join("");
+    } catch (e) { console.error("Historique :", e); }
+}
+
+// ==================================================================
+// UPLOAD IMAGE
+// ==================================================================
+const fileInput = document.getElementById("file-input");
+const previewThumb = document.getElementById("preview-thumb");
+const uploadArea = document.getElementById("upload-area");
+
+uploadArea.addEventListener("dragover", (e) => { e.preventDefault(); uploadArea.classList.add("dragover"); });
+uploadArea.addEventListener("dragleave", () => uploadArea.classList.remove("dragover"));
+uploadArea.addEventListener("drop", (e) => {
+    e.preventDefault(); uploadArea.classList.remove("dragover");
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+
+fileInput.addEventListener("change", (e) => {
+    if (e.target.files.length) handleFile(e.target.files[0]);
+});
+
+async function handleFile(file) {
+    if (!file.type.startsWith("image/")) {
+        setUploadStatus("❌ Fichier non image.", "err");
+        return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+        setUploadStatus("❌ Image trop lourde (max 10 MB).", "err");
+        return;
+    }
+
+    try {
+        setUploadStatus("⏳ Lecture du fichier…", "");
+        const dataUri = await fileToDataUri(file);
+        state.referenceImageDataUri = dataUri;
+        previewThumb.src = dataUri;
+        previewThumb.classList.add("visible");
+        setUploadStatus("✅ Image prête. L'IA va analyser le style et créer 20 actions épiques.", "ok");
+        log(`Photo chargée (${(file.size / 1024).toFixed(0)} Ko).`, "ok");
+        document.getElementById("start-btn").disabled = false;
+        document.getElementById("analysis-panel").classList.remove("visible");
+    } catch (err) {
+        setUploadStatus("❌ Erreur : " + err.message, "err");
+        log("Erreur lecture image : " + err.message, "err");
+    }
+}
+
+function clearImage() {
+    state.referenceImageDataUri = null;
+    state.analysis = null;
+    fileInput.value = "";
+    previewThumb.src = "";
+    previewThumb.classList.remove("visible");
+    setUploadStatus("");
+    document.getElementById("start-btn").disabled = true;
+    document.getElementById("analysis-panel").classList.remove("visible");
+    log("Photo de référence retirée.", "");
+}
+
+// ==================================================================
+// INIT
+// ==================================================================
+(async function init() {
+    const stored = localStorage.getItem("agnes_api_key");
+    document.getElementById("api-key-input").value = stored || DEFAULT_API_KEY;
+
+    try {
+        await openDB();
+        log("IndexedDB initialisée.", "ok");
+        await loadHistory();
+    } catch (e) {
+        log("Erreur IndexedDB : " + e.message, "err");
+    }
+    console.log("CinéIA — Prêt");
+})();
+</script>
+</body>
+</html>
